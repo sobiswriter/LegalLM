@@ -52,9 +52,11 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
     const element = viewerContainerRef.current;
 
     // Remove previous highlight
-    const previousHighlight = element.querySelector('mark.current-highlight');
+    let previousHighlight = element.querySelector('mark.current-highlight');
     if (previousHighlight) {
-      previousHighlight.outerHTML = previousHighlight.innerHTML;
+        previousHighlight.outerHTML = previousHighlight.innerHTML;
+        // Reread the element to get the clean DOM
+        previousHighlight = element.querySelector('mark.current-highlight');
     }
 
     if (!quote) {
@@ -63,56 +65,49 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
     }
 
     if (isPdf) {
-      element.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    // For docx (HTML content)
-    if (isDocx && htmlContent) {
-      const escapedQuote = escapeRegExp(quote);
-      const regex = new RegExp(escapedQuote, 'i'); // Case-insensitive search
-      if (element.innerHTML.match(regex)) {
-        element.innerHTML = element.innerHTML.replace(regex, (match) => `<mark class="bg-primary/30 animate-pulse rounded-sm current-highlight">${match}</mark>`);
-        
-        const newHighlight = element.querySelector('mark.current-highlight');
-        if (newHighlight) {
-          newHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          setTimeout(() => {
-            if (newHighlight.parentNode) {
-              newHighlight.outerHTML = newHighlight.innerHTML;
-            }
-          }, 3000);
-        }
-      }
+      // PDF highlighting is handled inside the embed, cannot control from here
       return;
     }
     
-    // For txt files
+    // For docx (HTML content) and txt (preformatted text)
     const walker = window.document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
     let node;
+    const nodesToReplace: {node: Text, range: Range}[] = [];
+
     while (node = walker.nextNode()) {
-      const nodeText = node.nodeValue || '';
-      const matchIndex = nodeText.indexOf(quote);
-      if (matchIndex !== -1) {
+      if (node.nodeValue) {
+        const matchIndex = node.nodeValue.indexOf(quote);
+        if (matchIndex !== -1) {
           const range = document.createRange();
           range.setStart(node, matchIndex);
           range.setEnd(node, matchIndex + quote.length);
-          
-          const mark = document.createElement('mark');
-          mark.className = "bg-primary/30 animate-pulse rounded-sm current-highlight";
-          range.surroundContents(mark);
-          
-          mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          setTimeout(() => {
-              if (mark.parentNode) {
-                  mark.outerHTML = mark.innerHTML;
-              }
-          }, 3000);
-          
-          break; 
+          nodesToReplace.push({ node, range });
+        }
       }
     }
+
+    if (nodesToReplace.length > 0) {
+      const mark = document.createElement('mark');
+      mark.className = "bg-primary/30 animate-pulse rounded-sm current-highlight";
+      
+      // Use the first found node for highlighting
+      const { range } = nodesToReplace[0];
+      try {
+        range.surroundContents(mark);
+        mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Remove the highlight after a delay
+        setTimeout(() => {
+            if (mark.parentNode) {
+                mark.outerHTML = mark.innerHTML;
+            }
+        }, 3000);
+
+      } catch (e) {
+        console.error("Failed to surround contents for highlighting", e);
+      }
+    }
+
   }, [viewerContent, isDocx, htmlContent]);
   
   const highlightedContent = useMemo(() => {
@@ -126,13 +121,13 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
 
 
   return (
-    <section className="flex-1 flex flex-col bg-background h-screen">
+    <section className="flex flex-col bg-background h-screen">
       <div className="p-4 border-b shrink-0 flex items-center justify-between">
         <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Document Viewer'}</h2>
-        {isPdf && (
+        {(isPdf || isDocx) && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <AlertCircle className="w-4 h-4" />
-                <span>Citation highlighting is not available for PDFs.</span>
+                <span>Citation highlighting may not be precise for PDF/DOCX.</span>
             </div>
         )}
       </div>

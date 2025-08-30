@@ -90,15 +90,15 @@ export default function LegalLMPage() {
             title: "Error",
             description: "Could not process the uploaded file.",
         });
-    } finally {
-      setIsLoading(false);
-      setLoadingAction(null);
+        setIsLoading(false);
+        setLoadingAction(null);
     }
 
     event.target.value = '';
   };
 
   const handleSelectDocument = (doc: Document) => {
+    if (selectedDocument?.id === doc.id) return;
     setSelectedDocument(doc);
     handleGenerateSummary(doc, true);
   };
@@ -154,6 +154,7 @@ export default function LegalLMPage() {
     if (clearChat) {
       setMessages([]);
     }
+    
     try {
       const { summary } = await generateDocumentSummary({ documentDataUri: doc.content, documentName: doc.name });
       addMessage({ sender: 'ai', content: summary });
@@ -218,7 +219,9 @@ export default function LegalLMPage() {
           canUpload={!isLoading}
         />
         <Separator orientation="vertical" />
-        <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} />
+        <div className="flex-1 min-w-0 max-w-[calc(100vw-960px)]">
+          <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} />
+        </div>
         <Separator orientation="vertical" />
         <div className="w-[580px] flex-shrink-0">
           <AnalysisPanel
@@ -226,7 +229,7 @@ export default function LegalLMPage() {
             messages={messages}
             onSendMessage={handleSendMessage}
             onCitationClick={handleCitationClick}
-            onGenerateSummary={() => handleGenerateSummary(selectedDocument, false)}
+            onGenerateSummary={() => handleGenerateSummary(selectedDocument, true)}
             onRiskAnalysis={handleRiskAnalysis}
             onDefineTerm={handleDefineTerm}
             isLoading={isLoading}

@@ -43,7 +43,7 @@ const ChatMessage = ({ message, onCitationClick }: { message: Message, onCitatio
   useEffect(() => {
     const handleCitation = (e: Event) => {
         const target = e.target as HTMLElement;
-        if (target.tagName === 'SUP') {
+        if (target.tagName === 'SUP' && target.hasAttribute('data-quote')) {
             e.preventDefault();
             e.stopPropagation();
             const quote = target.getAttribute('data-quote');
@@ -58,7 +58,7 @@ const ChatMessage = ({ message, onCitationClick }: { message: Message, onCitatio
     return () => {
         contentEl?.removeEventListener('click', handleCitation);
     };
-  }, [onCitationClick]);
+  }, [onCitationClick, message.content]); // Re-run if content changes
 
   return (
     <div className={cn("flex items-start gap-4 my-6", isUser ? 'justify-end' : 'justify-start')}>
@@ -146,11 +146,11 @@ const ActionToolbar = ({ onGenerateSummary, onRiskAnalysis, onDefineTerm, isLoad
                     )}
                     Analyze Risks
                 </Button>
-                <form onSubmit={handleDefineSubmit} className="flex items-center gap-2 flex-1 sm:flex-initial sm:min-w-[300px]">
+                <form onSubmit={handleDefineSubmit} className="flex items-center gap-2 flex-1 sm:flex-initial sm:min-w-[200px]">
                     <Input
                         value={term}
                         onChange={e => setTerm(e.target.value)}
-                        placeholder="Define a legal term..."
+                        placeholder="Define a term..."
                         className="h-9 text-sm flex-1"
                         disabled={isLoading}
                     />
@@ -231,7 +231,7 @@ const ChatView = ({ document, messages, onSendMessage, onCitationClick, onGenera
 
 export function AnalysisPanel(props: AnalysisPanelProps) {
   return (
-    <main className="flex flex-col bg-card border-l h-screen">
+    <main className="flex flex-col bg-card border-l h-screen w-full overflow-hidden">
       {!props.document ? (
         <WelcomeView />
       ) : (
