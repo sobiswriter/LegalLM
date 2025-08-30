@@ -139,7 +139,7 @@ export default function LegalLMPage() {
     }
     try {
       const { summary } = await generateDocumentSummary({ documentDataUri: doc.content, documentName: doc.name });
-      addMessage({ sender: 'ai', content: `<h3>Summary of ${doc.name}</h3>${summary}` });
+      addMessage({ sender: 'ai', content: summary });
     } catch (error) {
        console.error('Error generating summary:', error);
       addMessage({ sender: 'ai', content: `Sorry, I couldn't generate a summary for ${doc.name}.` });
