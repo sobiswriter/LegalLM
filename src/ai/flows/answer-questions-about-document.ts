@@ -8,15 +8,17 @@
  */
 
 import {ai} from '@/ai/genkit';
+import { extractTextFromDataUri } from '@/lib/document-utils';
 import {z} from 'genkit';
 
 const AnswerQuestionsAboutDocumentInputSchema = z.object({
   question: z.string().describe('The question about the legal document.'),
-  documentContent: z
+  documentDataUri: z
     .string()
     .describe(
-      'The content of the legal document as a data URI (e.g., data:application/pdf;base64,...).'
+      'The legal document to analyze, as a data URI that must include a MIME type and use Base64 encoding.'
     ),
+  documentName: z.string().describe('The name of the document file.'),
 });
 export type AnswerQuestionsAboutDocumentInput = z.infer<typeof AnswerQuestionsAboutDocumentInputSchema>;
 
@@ -31,7 +33,10 @@ export async function answerQuestionsAboutDocument(input: AnswerQuestionsAboutDo
 
 const prompt = ai.definePrompt({
   name: 'answerQuestionsAboutDocumentPrompt',
-  input: {schema: AnswerQuestionsAboutDocumentInputSchema},
+  input: {schema: z.object({
+    question: z.string(),
+    documentContent: z.string(),
+  })},
   output: {schema: AnswerQuestionsAboutDocumentOutputSchema},
   prompt: `You are a legal expert. You will answer questions based ONLY on the provided legal document.
   Format your output as clean, semantic HTML using <p> tags.
@@ -39,7 +44,7 @@ const prompt = ai.definePrompt({
   For each citation, add a data-quote attribute to the sup tag containing the exact text from the document being cited. For example: "<p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>"
 
   Question: {{{question}}}
-  Document: {{media url=documentContent}}`,
+  Document: {{{documentContent}}}`,
 });
 
 const answerQuestionsAboutDocumentFlow = ai.defineFlow(
@@ -48,8 +53,12 @@ const answerQuestionsAboutDocumentFlow = ai.defineFlow(
     inputSchema: AnswerQuestionsAboutDocumentInputSchema,
     outputSchema: AnswerQuestionsAboutDocumentOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async ({ question, documentDataUri, documentName }) => {
+    const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
+    const {output} = await prompt({
+        question,
+        documentContent: extractedText,
+    });
     return output!;
   }
 );

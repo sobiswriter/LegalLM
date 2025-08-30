@@ -9,15 +9,17 @@
  */
 
 import {ai} from '@/ai/genkit';
+import { extractTextFromDataUri } from '@/lib/document-utils';
 import {z} from 'genkit';
 
 const DefineLegalTermInputSchema = z.object({
   term: z.string().describe('The legal term to be defined.'),
-  documentContent: z
+  documentDataUri: z
     .string()
     .describe(
       'The content of the legal document as a data URI for context.'
     ),
+  documentName: z.string().describe('The name of the document file.'),
 });
 export type DefineLegalTermInput = z.infer<typeof DefineLegalTermInputSchema>;
 
@@ -32,7 +34,10 @@ export async function defineLegalTerm(input: DefineLegalTermInput): Promise<Defi
 
 const prompt = ai.definePrompt({
   name: 'defineLegalTermPrompt',
-  input: {schema: DefineLegalTermInputSchema},
+  input: {schema: z.object({
+    term: z.string(),
+    documentContent: z.string(),
+  })},
   output: {schema: DefineLegalTermOutputSchema},
   prompt: `You are a legal dictionary. The user wants to understand a specific term from a legal document.
   
@@ -44,7 +49,7 @@ const prompt = ai.definePrompt({
 
   Format your output as clean, semantic HTML.
   
-  Document for context: {{media url=documentContent}}`,
+  Document for context: {{{documentContent}}}`,
 });
 
 const defineLegalTermFlow = ai.defineFlow(
@@ -53,8 +58,12 @@ const defineLegalTermFlow = ai.defineFlow(
     inputSchema: DefineLegalTermInputSchema,
     outputSchema: DefineLegalTermOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async ({term, documentDataUri, documentName}) => {
+    const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
+    const {output} = await prompt({
+        term,
+        documentContent: extractedText,
+    });
     return output!;
   }
 );

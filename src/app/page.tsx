@@ -134,7 +134,8 @@ export default function LegalLMPage() {
     try {
       const { answer } = await answerQuestionsAboutDocument({
         question: content,
-        documentContent: selectedDocument.content,
+        documentDataUri: selectedDocument.content,
+        documentName: selectedDocument.name,
       });
       addMessage({ sender: 'ai', content: answer });
     } catch (error) {
@@ -173,7 +174,7 @@ export default function LegalLMPage() {
     setIsLoading(true);
     setLoadingAction('risks');
     try {
-      const { analysis } = await identifyRisksAndClauses({ documentContent: selectedDocument.content });
+      const { analysis } = await identifyRisksAndClauses({ documentDataUri: selectedDocument.content, documentName: selectedDocument.name });
       addMessage({ sender: 'ai', content: analysis });
     } catch (error) {
       console.error('Error analyzing risks:', error);
@@ -193,7 +194,8 @@ export default function LegalLMPage() {
     try {
       const { definition } = await defineLegalTerm({
         term,
-        documentContent: selectedDocument.content,
+        documentDataUri: selectedDocument.content,
+        documentName: selectedDocument.name,
       });
       addMessage({ sender: 'ai', content: definition });
     } catch (error) {

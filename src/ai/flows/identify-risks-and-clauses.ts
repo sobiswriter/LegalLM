@@ -9,14 +9,16 @@
  */
 
 import {ai} from '@/ai/genkit';
+import { extractTextFromDataUri } from '@/lib/document-utils';
 import {z} from 'genkit';
 
 const IdentifyRisksAndClausesInputSchema = z.object({
-  documentContent: z
+  documentDataUri: z
     .string()
     .describe(
       'The content of the legal document as a data URI (e.g., data:application/pdf;base64,...).'
     ),
+  documentName: z.string().describe('The name of the document file.'),
 });
 export type IdentifyRisksAndClausesInput = z.infer<typeof IdentifyRisksAndClausesInputSchema>;
 
@@ -31,7 +33,7 @@ export async function identifyRisksAndClauses(input: IdentifyRisksAndClausesInpu
 
 const prompt = ai.definePrompt({
   name: 'identifyRisksAndClausesPrompt',
-  input: {schema: IdentifyRisksAndClausesInputSchema},
+  input: {schema: z.object({ documentContent: z.string() })},
   output: {schema: IdentifyRisksAndClausesOutputSchema},
   prompt: `You are a meticulous legal analyst. Analyze the provided document to identify potential legal risks, important obligations, and critical clauses.
   
@@ -40,7 +42,7 @@ const prompt = ai.definePrompt({
   
   Structure your output as clean, semantic HTML with <h3> for sections (e.g., "Potential Risks", "Key Clauses") and <p> for descriptions.
   
-  Document: {{media url=documentContent}}`,
+  Document: {{{documentContent}}}`,
 });
 
 const identifyRisksAndClausesFlow = ai.defineFlow(
@@ -49,8 +51,9 @@ const identifyRisksAndClausesFlow = ai.defineFlow(
     inputSchema: IdentifyRisksAndClausesInputSchema,
     outputSchema: IdentifyRisksAndClausesOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async ({documentDataUri, documentName}) => {
+    const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
+    const {output} = await prompt({ documentContent: extractedText });
     return output!;
   }
 );
