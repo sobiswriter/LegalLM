@@ -14,9 +14,10 @@ interface SourcesPanelProps {
   onSelectDocument: (doc: Document) => void;
   isUploading: boolean;
   canUpload: boolean;
+  highlightedDocId?: number | null;
 }
 
-export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSelectDocument, isUploading, canUpload }: SourcesPanelProps) {
+export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSelectDocument, isUploading, canUpload, highlightedDocId }: SourcesPanelProps) {
   return (
     <aside className="w-[380px] flex-shrink-0 bg-card border-r flex flex-col">
       <div className="p-4 border-b">
@@ -39,20 +40,24 @@ export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSel
           <p className="px-4 pb-2 text-sm font-medium text-muted-foreground">Sources</p>
           <ScrollArea className="flex-1">
             <div className="px-4 pb-4 space-y-2">
-              {documents.map(doc => (
-                <button
-                  key={doc.id}
-                  onClick={() => onSelectDocument(doc)}
-                  className={cn(
-                    "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3",
-                    "hover:bg-accent hover:border-primary/20",
-                    selectedDocument?.id === doc.id ? 'bg-accent border-primary/50 shadow-sm' : 'bg-card'
-                  )}
-                >
-                  <FileText className="w-5 h-5 text-primary flex-shrink-0" />
-                  <span className="truncate text-sm font-medium text-card-foreground">{doc.name}</span>
-                </button>
-              ))}
+              {documents.map(doc => {
+                const isHighlighted = highlightedDocId === doc.id;
+                return (
+                    <button
+                    key={doc.id}
+                    onClick={() => onSelectDocument(doc)}
+                    className={cn(
+                        "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3",
+                        "hover:bg-accent hover:border-primary/20",
+                        selectedDocument?.id === doc.id ? 'bg-accent border-primary/50 shadow-sm' : 'bg-card',
+                        isHighlighted && "ring-2 ring-accent-foreground ring-offset-2 ring-offset-background"
+                    )}
+                    >
+                    <FileText className="w-5 h-5 text-primary flex-shrink-0" />
+                    <span className="truncate text-sm font-medium text-card-foreground">{doc.name}</span>
+                    </button>
+                );
+              })}
               {documents.length === 0 && !isUploading && (
                 <div className="text-center text-sm text-muted-foreground pt-8">
                   <p>Upload your first document to get started.</p>

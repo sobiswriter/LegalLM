@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useTransition } from 'react';
 import type { Document, Message } from '@/lib/types';
 import { SourcesPanel } from '@/components/legal-lm/sources-panel';
 import { AnalysisPanel } from '@/components/legal-lm/analysis-panel';
@@ -14,6 +14,9 @@ export default function LegalLMPage() {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAddingDoc, setIsAddingDoc] = useState(false);
+  const [isAnswering, setIsAnswering] = useState(false);
+  const [highlightedDoc, setHighlightedDoc] = useState<number | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -71,12 +74,22 @@ export default function LegalLMPage() {
     setSelectedDocument(doc);
     setMessages([{ id: Date.now(), sender: 'ai', content: doc.summary }]);
   };
+  
+  const handleCitationClick = () => {
+    if (!selectedDocument) return;
+    setHighlightedDoc(selectedDocument.id);
+    setTimeout(() => {
+        setHighlightedDoc(null);
+    }, 1000); // Highlight for 1 second
+  };
+
 
   const handleSendMessage = async (content: string) => {
     if (!selectedDocument?.content) return;
 
     const userMessage: Message = { id: Date.now(), sender: 'user', content };
     setMessages(prev => [...prev, userMessage]);
+    setIsAnswering(true);
 
     try {
       const { answer } = await answerQuestionsAboutDocument({
@@ -91,6 +104,8 @@ export default function LegalLMPage() {
       console.error('Error getting answer:', error);
       const errorMessage: Message = { id: Date.now() + 1, sender: 'ai', content: "Sorry, I encountered an error trying to answer your question." };
       setMessages(prev => [...prev, errorMessage]);
+    } finally {
+        setIsAnswering(false);
     }
   };
 
@@ -103,12 +118,15 @@ export default function LegalLMPage() {
           onAddDocument={handleAddDocumentClick}
           onSelectDocument={handleSelectDocument}
           isUploading={isAddingDoc}
+          highlightedDocId={highlightedDoc}
           canUpload={true}
         />
         <AnalysisPanel
           document={selectedDocument}
           messages={messages}
           onSendMessage={handleSendMessage}
+          isAnswering={isAnswering}
+          onCitationClick={handleCitationClick}
         />
       </div>
        <input

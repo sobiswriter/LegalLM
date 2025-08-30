@@ -4,16 +4,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Feather, SendHorizonal, User } from 'lucide-react';
 import type { Document, Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface AnalysisPanelProps {
   document: Document | null;
   messages: Message[];
   onSendMessage: (content: string) => void;
+  isAnswering: boolean;
+  onCitationClick: (citationId: string) => void;
 }
 
 const WelcomeView = () => (
@@ -28,8 +31,25 @@ const WelcomeView = () => (
   </div>
 );
 
-const ChatMessage = ({ message }: { message: Message }) => {
+const ChatMessage = ({ message, onCitationClick }: { message: Message, onCitationClick: (citationId: string) => void }) => {
   const isUser = message.sender === 'user';
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleCitation = (e: Event) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'SUP') {
+            onCitationClick(target.textContent || '');
+        }
+    };
+    const contentEl = contentRef.current;
+    contentEl?.addEventListener('click', handleCitation);
+
+    return () => {
+        contentEl?.removeEventListener('click', handleCitation);
+    };
+  }, [onCitationClick]);
+
   return (
     <div className={cn("flex items-start gap-4 my-6", isUser ? 'justify-end' : 'justify-start')}>
       {!isUser && (
@@ -44,6 +64,7 @@ const ChatMessage = ({ message }: { message: Message }) => {
         isUser ? 'bg-primary text-primary-foreground' : 'bg-card'
       )}>
         <div
+          ref={contentRef}
           className="prose prose-sm dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: message.content }}
         />
@@ -59,8 +80,23 @@ const ChatMessage = ({ message }: { message: Message }) => {
   );
 };
 
+const ThinkingMessage = () => (
+    <div className="flex items-start gap-4 my-6 justify-start">
+        <Avatar className="w-8 h-8 border">
+          <AvatarFallback className="bg-primary/20 text-primary">
+            <Feather className="w-4 h-4"/>
+          </AvatarFallback>
+        </Avatar>
+        <div className="max-w-2xl w-full rounded-lg px-4 py-3 shadow-sm bg-card space-y-2">
+            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/5" />
+        </div>
+    </div>
+)
 
-export function AnalysisPanel({ document, messages, onSendMessage }: AnalysisPanelProps) {
+
+export function AnalysisPanel({ document, messages, onSendMessage, isAnswering, onCitationClick }: AnalysisPanelProps) {
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -71,11 +107,11 @@ export function AnalysisPanel({ document, messages, onSendMessage }: AnalysisPan
             viewport.scrollTop = viewport.scrollHeight;
         }
     }
-  }, [messages]);
+  }, [messages, isAnswering]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) {
+    if (input.trim() && !isAnswering) {
       onSendMessage(input.trim());
       setInput('');
     }
@@ -95,8 +131,9 @@ export function AnalysisPanel({ document, messages, onSendMessage }: AnalysisPan
         <ScrollArea className="flex-1" ref={scrollAreaRef}>
           <div className="p-6">
             {messages.map(msg => (
-              <ChatMessage key={msg.id} message={msg} />
+              <ChatMessage key={msg.id} message={msg} onCitationClick={onCitationClick} />
             ))}
+            {isAnswering && <ThinkingMessage />}
           </div>
         </ScrollArea>
         <div className="px-6 py-4 border-t bg-background">
@@ -106,8 +143,9 @@ export function AnalysisPanel({ document, messages, onSendMessage }: AnalysisPan
               onChange={e => setInput(e.target.value)}
               placeholder="Ask a question about the document..."
               className="flex-1"
+              disabled={isAnswering}
             />
-            <Button type="submit" size="icon" disabled={!input.trim()}>
+            <Button type="submit" size="icon" disabled={!input.trim() || isAnswering}>
               <SendHorizonal className="w-4 h-4" />
               <span className="sr-only">Send message</span>
             </Button>
