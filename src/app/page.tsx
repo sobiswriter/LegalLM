@@ -50,8 +50,6 @@ export default function LegalLMPage() {
             content: dataUri,
           };
           setDocuments(prev => [...prev, newDoc]);
-          // This will trigger the initial summary generation
-          handleSelectDocument(newDoc);
         } catch (error) {
           console.error('Error processing file:', error);
           toast({
@@ -81,8 +79,6 @@ export default function LegalLMPage() {
 
   const handleSelectDocument = (doc: Document) => {
     setSelectedDocument(doc);
-    setMessages([]);
-    // Immediately trigger summary generation for the selected doc
     handleGenerateSummary(doc, true);
   };
 
@@ -220,7 +216,7 @@ export default function LegalLMPage() {
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".txt,.pdf"
+        accept=".txt,.pdf,.docx"
       />
     </>
   );

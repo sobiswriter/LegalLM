@@ -11,6 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import PDFParser from 'pdf2json';
+import mammoth from 'mammoth';
 
 
 // Helper to extract text from a data URI
@@ -35,6 +36,11 @@ const extractTextFromDataUri = async (dataUri: string, fileName: string): Promis
 
       pdfParser.parseBuffer(buffer);
     });
+  }
+
+  if (extension === 'docx') {
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value;
   }
   
   // For .txt and other files, return the decoded content

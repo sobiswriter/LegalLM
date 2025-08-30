@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import type { Document } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { AlertCircle } from 'lucide-react';
+import mammoth from 'mammoth';
 
 interface DocumentViewerPanelProps {
   document: Document | null;
@@ -24,24 +25,44 @@ const escapeRegExp = (string: string) => {
 export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerPanelProps) {
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [textContent, setTextContent] = useState<string>('');
+  const [htmlContent, setHtmlContent] = useState<string>('');
+
 
   const isPdf = document?.name.endsWith('.pdf') ?? false;
+  const isDocx = document?.name.endsWith('.docx') ?? false;
 
   useEffect(() => {
-    if (document && !isPdf) {
-      // Decode base64 content for text files
-      try {
-        const base64 = document.content.substring(document.content.indexOf(',') + 1);
-        const decoded = atob(base64);
-        setTextContent(decoded);
-      } catch (e) {
-        console.error("Failed to decode text content", e);
-        setTextContent("Error: Could not display file content.");
+    if (document) {
+      const base64 = document.content.substring(document.content.indexOf(',') + 1);
+      if (isDocx) {
+        const buffer = Buffer.from(base64, 'base64');
+        mammoth.convertToHtml({ buffer })
+          .then(result => {
+            setHtmlContent(result.value);
+            setTextContent('');
+          })
+          .catch(err => {
+            console.error("Failed to convert docx to html", err);
+            setHtmlContent("<p>Error: Could not display file content.</p>");
+          });
+      } else if (!isPdf) {
+        // Decode base64 content for text files
+        try {
+          const decoded = atob(base64);
+          setTextContent(decoded);
+          setHtmlContent('');
+        } catch (e) {
+          console.error("Failed to decode text content", e);
+          setTextContent("Error: Could not display file content.");
+          setHtmlContent('');
+        }
+      } else {
+        setTextContent('');
+        setHtmlContent('');
       }
-    } else {
-      setTextContent('');
     }
-  }, [document, isPdf]);
+  }, [document, isPdf, isDocx]);
+
 
   useEffect(() => {
     if (viewerContent && viewerContainerRef.current) {
@@ -49,6 +70,12 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
       
       // For PDFs or empty quotes, just scroll to top
       if (isPdf || !quote) {
+        viewerContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      if (isDocx) {
+        // In docx, we can't reliably scroll to a quote, so just scroll to top
         viewerContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
@@ -66,10 +93,10 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
         element.scrollTo({ top: scrollPosition, behavior: 'smooth' });
       }
     }
-  }, [viewerContent, isPdf, textContent]);
+  }, [viewerContent, isPdf, isDocx, textContent]);
   
   const highlightedContent = useMemo(() => {
-    if (isPdf) {
+    if (isPdf || isDocx) {
       return null;
     }
     
@@ -97,31 +124,36 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
       </pre>
     );
 
-  }, [textContent, viewerContent, isPdf]);
+  }, [textContent, viewerContent, isPdf, isDocx]);
 
 
   return (
     <section className="flex-1 flex flex-col bg-background h-screen">
       <div className="p-4 border-b shrink-0 flex items-center justify-between">
         <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Document Viewer'}</h2>
-        {isPdf && (
+        {(isPdf || isDocx) && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <AlertCircle className="w-4 h-4" />
-                <span>Citation highlighting is not available for PDFs.</span>
+                <span>Citation highlighting is not available for {isPdf ? 'PDFs' : 'DOCX files'}.</span>
             </div>
         )}
       </div>
       <div ref={viewerContainerRef} className="flex-1 bg-muted/20 overflow-y-auto transition-all duration-300">
         {document ? (
-          isPdf ? (
-            <embed
-              src={document.content}
-              type="application/pdf"
-              className="w-full h-full"
-            />
-          ) : (
-            <div>{highlightedContent}</div>
-          )
+            isPdf ? (
+              <embed
+                src={document.content}
+                type="application/pdf"
+                className="w-full h-full"
+              />
+            ) : isDocx ? (
+              <div
+                className="p-8 prose dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: htmlContent }}
+              />
+            ) : (
+              <div>{highlightedContent}</div>
+            )
         ) : (
           <WelcomeView />
         )}
