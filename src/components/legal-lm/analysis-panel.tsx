@@ -44,6 +44,8 @@ const ChatMessage = ({ message, onCitationClick }: { message: Message, onCitatio
     const handleCitation = (e: Event) => {
         const target = e.target as HTMLElement;
         if (target.tagName === 'SUP') {
+            e.preventDefault();
+            e.stopPropagation();
             onCitationClick(target.textContent || '');
         }
     };

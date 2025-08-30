@@ -19,7 +19,7 @@ export default function LegalLMPage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const [highlightedDoc, setHighlightedDoc] = useState<number | null>(null);
+  const [highlightedDocId, setHighlightedDocId] = useState<number | null>(null);
   const [viewerScroll, setViewerScroll] = useState<number>(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,22 +48,16 @@ export default function LegalLMPage() {
             content: dataUri,
           };
           setDocuments(prev => [...prev, newDoc]);
-          handleSelectDocument(newDoc);
-          
-          const { summary } = await generateDocumentSummary({ documentDataUri: dataUri, documentName: file.name });
-          const summaryMessage: Message = {
-            id: Date.now() + 1,
-            sender: 'ai',
-            content: `<h3>Summary of ${file.name}</h3>${summary}`
-          };
-          setMessages([summaryMessage]);
+          if (!selectedDocument) {
+            handleSelectDocument(newDoc);
+          }
 
         } catch (error) {
-          console.error('Error generating summary:', error);
+          console.error('Error processing file:', error);
           toast({
             variant: "destructive",
             title: "Error",
-            description: "Failed to generate document summary. Please try again.",
+            description: "Failed to process the uploaded file.",
           });
         } finally {
           setIsLoading(false);
@@ -92,13 +86,13 @@ export default function LegalLMPage() {
     handleGenerateSummary(doc);
   };
 
-  const handleCitationClick = () => {
+  const handleCitationClick = (citationId: string) => {
     if (!selectedDocument) return;
-    setHighlightedDoc(selectedDocument.id);
-    setViewerScroll(Date.now()); // Trigger scroll effect
+    setHighlightedDocId(selectedDocument.id);
+    setViewerScroll(Date.now()); // Trigger scroll effect by changing the value
     setTimeout(() => {
-        setHighlightedDoc(null);
-    }, 1000);
+        setHighlightedDocId(null);
+    }, 2000); // Highlight for 2 seconds
   };
 
   const addMessage = (message: Omit<Message, 'id'>) => {
@@ -132,6 +126,7 @@ export default function LegalLMPage() {
     
     setIsLoading(true);
     setLoadingAction('summary');
+    setMessages([]); // Clear previous messages
     try {
       const { summary } = await generateDocumentSummary({ documentDataUri: doc.content, documentName: doc.name });
       addMessage({ sender: 'ai', content: `<h3>Summary of ${doc.name}</h3>${summary}` });
@@ -192,7 +187,7 @@ export default function LegalLMPage() {
           onAddDocument={handleAddDocumentClick}
           onSelectDocument={handleSelectDocument}
           isUploading={isLoading && loadingAction === 'summary'}
-          highlightedDocId={highlightedDoc}
+          highlightedDocId={highlightedDocId}
           canUpload={!isLoading}
         />
         <Separator orientation="vertical" />

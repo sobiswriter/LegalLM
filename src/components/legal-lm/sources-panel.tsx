@@ -50,7 +50,7 @@ export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSel
                         "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3",
                         "hover:bg-accent hover:border-primary/20",
                         selectedDocument?.id === doc.id ? 'bg-accent border-primary/50 shadow-sm' : 'bg-card',
-                        isHighlighted && "ring-2 ring-accent-foreground ring-offset-2 ring-offset-background"
+                        isHighlighted && "ring-2 ring-primary ring-offset-2 ring-offset-background"
                     )}
                     >
                     <FileText className="w-5 h-5 text-primary flex-shrink-0" />

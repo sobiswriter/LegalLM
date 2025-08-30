@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import type { Document } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface DocumentViewerPanelProps {
   document: Document | null;
@@ -17,10 +18,6 @@ const WelcomeView = () => (
 export function DocumentViewerPanel({ document, scrollTop }: DocumentViewerPanelProps) {
   const viewerContainerRef = useRef<HTMLDivElement>(null);
 
-  // This is a bit of a trick. The <embed> tag is a separate document,
-  // so we can't easily scroll it. Instead, we scroll its container.
-  // For a real app, we might use a library like react-pdf to render pages
-  // that we can control. For this demo, scrolling the container is a good simulation.
   useEffect(() => {
     if (scrollTop && viewerContainerRef.current) {
       viewerContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
@@ -32,7 +29,7 @@ export function DocumentViewerPanel({ document, scrollTop }: DocumentViewerPanel
       <div className="p-4 border-b shrink-0">
         <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Document Viewer'}</h2>
       </div>
-      <div ref={viewerContainerRef} className="flex-1 bg-muted/20 overflow-y-auto">
+      <div ref={viewerContainerRef} className="flex-1 bg-muted/20 overflow-y-auto transition-all duration-300">
         {document ? (
           <embed
             src={document.content}
