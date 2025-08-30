@@ -54,19 +54,6 @@ export async function generateDocumentSummary(input: GenerateDocumentSummaryInpu
   return generateDocumentSummaryFlow(input);
 }
 
-const extractTextTool = ai.defineTool(
-    {
-        name: 'extractTextTool',
-        description: 'Extracts plain text from a document provided as a data URI.',
-        inputSchema: z.object({ 
-            dataUri: z.string(),
-            fileName: z.string()
-        }),
-        outputSchema: z.string(),
-    },
-    async ({ dataUri, fileName }) => extractTextFromDataUri(dataUri, fileName)
-);
-
 const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
   input: {
