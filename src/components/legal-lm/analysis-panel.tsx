@@ -14,7 +14,7 @@ interface AnalysisPanelProps {
   document: Document | null;
   messages: Message[];
   onSendMessage: (content: string) => void;
-  onCitationClick: (citationId: string) => void;
+  onCitationClick: (quote: string) => void;
   
   onGenerateSummary: () => void;
   onRiskAnalysis: () => void;
@@ -36,7 +36,7 @@ const WelcomeView = () => (
   </div>
 );
 
-const ChatMessage = ({ message, onCitationClick }: { message: Message, onCitationClick: (citationId: string) => void }) => {
+const ChatMessage = ({ message, onCitationClick }: { message: Message, onCitationClick: (quote: string) => void }) => {
   const isUser = message.sender === 'user';
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +46,10 @@ const ChatMessage = ({ message, onCitationClick }: { message: Message, onCitatio
         if (target.tagName === 'SUP') {
             e.preventDefault();
             e.stopPropagation();
-            onCitationClick(target.textContent || '');
+            const quote = target.getAttribute('data-quote');
+            if (quote) {
+              onCitationClick(quote);
+            }
         }
     };
     const contentEl = contentRef.current;

@@ -39,8 +39,9 @@ const prompt = ai.definePrompt({
   Term: "{{{term}}}"
   
   First, provide a general definition of the term.
-  Then, analyze the provided document to see if the term is used or defined specifically within it. If it is, explain how it's used and cite the relevant section with a superscript number.
-  
+  Then, analyze the provided document to see if the term is used or defined specifically within it. If it is, explain how it's used and cite the relevant section.
+  For each citation, add a data-quote attribute to the sup tag containing the exact text from the document being cited. For example: "<p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>"
+
   Format your output as clean, semantic HTML.
   
   Document for context: {{media url=documentContent}}`,

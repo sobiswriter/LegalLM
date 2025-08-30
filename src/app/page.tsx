@@ -20,7 +20,9 @@ export default function LegalLMPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [highlightedDocId, setHighlightedDocId] = useState<number | null>(null);
-  const [viewerScroll, setViewerScroll] = useState<number>(0);
+
+  const [viewerContent, setViewerContent] = useState<{ quote: string; docId: number } | null>(null);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -86,14 +88,22 @@ export default function LegalLMPage() {
     handleGenerateSummary(doc);
   };
 
-  const handleCitationClick = (citationId: string) => {
+  const handleCitationClick = (quote: string) => {
     if (!selectedDocument) return;
+    
+    // For PDFs, just scroll to top for now
+    if (selectedDocument.name.endsWith('.pdf')) {
+        setViewerContent({ quote: '', docId: selectedDocument.id });
+    } else {
+        setViewerContent({ quote, docId: selectedDocument.id });
+    }
+
     setHighlightedDocId(selectedDocument.id);
-    setViewerScroll(Date.now()); // Trigger scroll effect by changing the value
     setTimeout(() => {
         setHighlightedDocId(null);
     }, 2000); // Highlight for 2 seconds
   };
+
 
   const addMessage = (message: Omit<Message, 'id'>) => {
     setMessages(prev => [...prev, { ...message, id: Date.now() }]);
@@ -191,7 +201,7 @@ export default function LegalLMPage() {
           canUpload={!isLoading}
         />
         <Separator orientation="vertical" />
-        <DocumentViewerPanel document={selectedDocument} scrollTop={viewerScroll} />
+        <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} />
         <Separator orientation="vertical" />
         <AnalysisPanel
           document={selectedDocument}

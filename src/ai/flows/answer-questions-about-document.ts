@@ -35,8 +35,8 @@ const prompt = ai.definePrompt({
   output: {schema: AnswerQuestionsAboutDocumentOutputSchema},
   prompt: `You are a legal expert. You will answer questions based ONLY on the provided legal document.
   Format your output as clean, semantic HTML using <p> tags.
-  When you answer, you MUST cite the specific parts of the document that support your answer. Use superscript numbers like a footnote to indicate the citation.
-  For example: "<p>The contract is valid until June 1, 2024<sup>1</sup>.</p>"
+  When you answer, you MUST cite the specific parts of the document that support your answer. 
+  For each citation, add a data-quote attribute to the sup tag containing the exact text from the document being cited. For example: "<p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>"
 
   Question: {{{question}}}
   Document: {{media url=documentContent}}`,

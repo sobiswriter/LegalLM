@@ -35,7 +35,8 @@ const prompt = ai.definePrompt({
   output: {schema: IdentifyRisksAndClausesOutputSchema},
   prompt: `You are a meticulous legal analyst. Analyze the provided document to identify potential legal risks, important obligations, and critical clauses.
   
-  For each finding, provide a clear explanation and cite the relevant part of the document using a superscript number.
+  For each finding, provide a clear explanation and cite the relevant part of the document.
+  For each citation, add a data-quote attribute to the sup tag containing the exact text from the document being cited. For example: "<p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>"
   
   Structure your output as clean, semantic HTML with <h3> for sections (e.g., "Potential Risks", "Key Clauses") and <p> for descriptions.
   
