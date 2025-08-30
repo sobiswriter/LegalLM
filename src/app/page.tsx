@@ -46,12 +46,12 @@ export default function LegalLMPage() {
           const newDoc: Document = {
             id: Date.now(),
             name: file.name,
-            summary: '', // Summary will be generated and added as a message
+            summary: '',
             content: dataUri,
           };
           setDocuments(prev => [...prev, newDoc]);
           // This will trigger the initial summary generation
-          handleSelectDocument(newDoc); 
+          handleSelectDocument(newDoc);
         } catch (error) {
           console.error('Error processing file:', error);
           toast({
@@ -135,7 +135,7 @@ export default function LegalLMPage() {
     setIsLoading(true);
     setLoadingAction('summary');
     if (clearChat) {
-      setMessages([]); // Clear previous messages
+      setMessages([]);
     }
     try {
       const { summary } = await generateDocumentSummary({ documentDataUri: doc.content, documentName: doc.name });
@@ -208,7 +208,7 @@ export default function LegalLMPage() {
           messages={messages}
           onSendMessage={handleSendMessage}
           onCitationClick={handleCitationClick}
-          onGenerateSummary={() => handleGenerateSummary()}
+          onGenerateSummary={() => handleGenerateSummary(selectedDocument, false)}
           onRiskAnalysis={handleRiskAnalysis}
           onDefineTerm={handleDefineTerm}
           isLoading={isLoading}
