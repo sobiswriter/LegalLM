@@ -5,11 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Feather, SendHorizonal, User, FileWarning, BookOpen, Search, FileText, Loader2 } from 'lucide-react';
+import { Feather, SendHorizonal, User, FileWarning, Search, FileText, Loader2 } from 'lucide-react';
 import type { Document, Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface AnalysisPanelProps {
   document: Document | null;
@@ -228,14 +227,14 @@ const ChatView = ({ document, messages, onSendMessage, onCitationClick, onGenera
 export function AnalysisPanel(props: AnalysisPanelProps) {
   if (!props.document) {
     return (
-      <main className="flex-1 flex flex-col">
+      <main className="w-[580px] flex-shrink-0 flex flex-col">
         <WelcomeView />
       </main>
     );
   }
 
   return (
-    <main className="flex-1 flex flex-col bg-background h-screen">
+    <main className="w-[580px] flex-shrink-0 flex flex-col bg-card border-l h-screen">
       <ChatView {...props} />
     </main>
   );

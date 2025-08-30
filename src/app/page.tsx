@@ -4,11 +4,13 @@ import React, { useState, useRef } from 'react';
 import type { Document, Message } from '@/lib/types';
 import { SourcesPanel } from '@/components/legal-lm/sources-panel';
 import { AnalysisPanel } from '@/components/legal-lm/analysis-panel';
+import { DocumentViewerPanel } from '@/components/legal-lm/document-viewer';
 import { generateDocumentSummary } from '@/ai/flows/generate-document-summary';
 import { identifyRisksAndClauses } from '@/ai/flows/identify-risks-and-clauses';
 import { answerQuestionsAboutDocument } from '@/ai/flows/answer-questions-about-document';
 import { defineLegalTerm } from '@/ai/flows/define-legal-term';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 export default function LegalLMPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -18,6 +20,7 @@ export default function LegalLMPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [highlightedDoc, setHighlightedDoc] = useState<number | null>(null);
+  const [viewerScroll, setViewerScroll] = useState<number>(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -92,6 +95,7 @@ export default function LegalLMPage() {
   const handleCitationClick = () => {
     if (!selectedDocument) return;
     setHighlightedDoc(selectedDocument.id);
+    setViewerScroll(Date.now()); // Trigger scroll effect
     setTimeout(() => {
         setHighlightedDoc(null);
     }, 1000);
@@ -191,6 +195,9 @@ export default function LegalLMPage() {
           highlightedDocId={highlightedDoc}
           canUpload={!isLoading}
         />
+        <Separator orientation="vertical" />
+        <DocumentViewerPanel document={selectedDocument} scrollTop={viewerScroll} />
+        <Separator orientation="vertical" />
         <AnalysisPanel
           document={selectedDocument}
           messages={messages}
