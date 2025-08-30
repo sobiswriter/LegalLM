@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import type { Document } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { AlertCircle } from 'lucide-react';
-import mammoth from 'mammoth';
 
 interface DocumentViewerPanelProps {
   document: Document | null;
@@ -25,41 +24,23 @@ const escapeRegExp = (string: string) => {
 export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerPanelProps) {
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [textContent, setTextContent] = useState<string>('');
-  const [htmlContent, setHtmlContent] = useState<string>('');
-
-
+  
   const isPdf = document?.name.endsWith('.pdf') ?? false;
   const isDocx = document?.name.endsWith('.docx') ?? false;
+  const htmlContent = document?.htmlContent;
 
   useEffect(() => {
-    if (document) {
+    if (document && !isPdf && !isDocx) {
       const base64 = document.content.substring(document.content.indexOf(',') + 1);
-      if (isDocx) {
-        const buffer = Buffer.from(base64, 'base64');
-        mammoth.convertToHtml({ buffer })
-          .then(result => {
-            setHtmlContent(result.value);
-            setTextContent('');
-          })
-          .catch(err => {
-            console.error("Failed to convert docx to html", err);
-            setHtmlContent("<p>Error: Could not display file content.</p>");
-          });
-      } else if (!isPdf) {
-        // Decode base64 content for text files
-        try {
-          const decoded = atob(base64);
-          setTextContent(decoded);
-          setHtmlContent('');
-        } catch (e) {
-          console.error("Failed to decode text content", e);
-          setTextContent("Error: Could not display file content.");
-          setHtmlContent('');
-        }
-      } else {
-        setTextContent('');
-        setHtmlContent('');
+      try {
+        const decoded = atob(base64);
+        setTextContent(decoded);
+      } catch (e) {
+        console.error("Failed to decode text content", e);
+        setTextContent("Error: Could not display file content.");
       }
+    } else {
+        setTextContent('');
     }
   }, [document, isPdf, isDocx]);
 
@@ -68,27 +49,18 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
     if (viewerContent && viewerContainerRef.current) {
       const { quote } = viewerContent;
       
-      // For PDFs or empty quotes, just scroll to top
-      if (isPdf || !quote) {
-        viewerContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-
-      if (isDocx) {
-        // In docx, we can't reliably scroll to a quote, so just scroll to top
+      if (isPdf || isDocx || !quote) {
         viewerContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
       
-      // For text files, find and scroll to the quote
       const element = viewerContainerRef.current;
       const match = textContent.indexOf(quote);
       
       if (match !== -1) {
-        // This is an approximation. A more robust solution might measure text size.
         const textBeforeMatch = textContent.substring(0, match);
         const lines = textBeforeMatch.split('\n').length;
-        const scrollPosition = lines * 1.5 * 16; // Approx 1.5 line-height, 16px font-size
+        const scrollPosition = lines * 1.5 * 16; 
 
         element.scrollTo({ top: scrollPosition, behavior: 'smooth' });
       }
@@ -149,7 +121,7 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
             ) : isDocx ? (
               <div
                 className="p-8 prose dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: htmlContent }}
+                dangerouslySetInnerHTML={{ __html: htmlContent || '<p>Converting document...</p>' }}
               />
             ) : (
               <div>{highlightedContent}</div>

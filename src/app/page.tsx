@@ -11,6 +11,33 @@ import { answerQuestionsAboutDocument } from '@/ai/flows/answer-questions-about-
 import { defineLegalTerm } from '@/ai/flows/define-legal-term';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import mammoth from 'mammoth';
+
+
+// Helper to get HTML content for docx files
+const getHtmlContent = async (file: File): Promise<string | undefined> => {
+    if (file.name.endsWith('.docx')) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                try {
+                    const result = await mammoth.convertToHtml({ arrayBuffer });
+                    resolve(result.value);
+                } catch (error) {
+                    console.error('Error converting docx to html', error);
+                    reject(error);
+                }
+            };
+            reader.onerror = (error) => {
+                reject(error);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+    return undefined;
+};
+
 
 export default function LegalLMPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -39,30 +66,24 @@ export default function LegalLMPage() {
     setLoadingAction('summary');
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const dataUri = e.target?.result as string;
-        try {
-          const newDoc: Document = {
-            id: Date.now(),
-            name: file.name,
-            summary: '',
-            content: dataUri,
-          };
-          setDocuments(prev => [...prev, newDoc]);
-        } catch (error) {
-          console.error('Error processing file:', error);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to process the uploaded file.",
-          });
-        } finally {
-          setIsLoading(false);
-          setLoadingAction(null);
-        }
-      };
-      reader.readAsDataURL(file);
+        const htmlContent = await getHtmlContent(file);
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUri = e.target?.result as string;
+            const newDoc: Document = {
+                id: Date.now(),
+                name: file.name,
+                summary: '',
+                content: dataUri,
+                htmlContent: htmlContent,
+            };
+            setDocuments(prev => [...prev, newDoc]);
+            setIsLoading(false);
+            setLoadingAction(null);
+        };
+        reader.readAsDataURL(file);
+
     } catch (error) {
         console.error('Error processing file:', error);
         toast({
