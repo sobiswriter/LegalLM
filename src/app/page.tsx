@@ -66,11 +66,10 @@ export default function LegalLMPage() {
     setLoadingAction('summary');
 
     try {
-        const htmlContent = await getHtmlContent(file);
-
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             const dataUri = e.target?.result as string;
+             const htmlContent = await getHtmlContent(file);
             const newDoc: Document = {
                 id: Date.now(),
                 name: file.name,
@@ -79,8 +78,8 @@ export default function LegalLMPage() {
                 htmlContent: htmlContent,
             };
             setDocuments(prev => [...prev, newDoc]);
-            setIsLoading(false);
-            setLoadingAction(null);
+            setSelectedDocument(newDoc);
+            handleGenerateSummary(newDoc, true);
         };
         reader.readAsDataURL(file);
 
@@ -91,8 +90,9 @@ export default function LegalLMPage() {
             title: "Error",
             description: "Could not process the uploaded file.",
         });
-        setIsLoading(false);
-        setLoadingAction(null);
+    } finally {
+      setIsLoading(false);
+      setLoadingAction(null);
     }
 
     event.target.value = '';
@@ -220,17 +220,19 @@ export default function LegalLMPage() {
         <Separator orientation="vertical" />
         <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} />
         <Separator orientation="vertical" />
-        <AnalysisPanel
-          document={selectedDocument}
-          messages={messages}
-          onSendMessage={handleSendMessage}
-          onCitationClick={handleCitationClick}
-          onGenerateSummary={() => handleGenerateSummary(selectedDocument, false)}
-          onRiskAnalysis={handleRiskAnalysis}
-          onDefineTerm={handleDefineTerm}
-          isLoading={isLoading}
-          loadingAction={loadingAction}
-        />
+        <div className="w-[580px] flex-shrink-0">
+          <AnalysisPanel
+            document={selectedDocument}
+            messages={messages}
+            onSendMessage={handleSendMessage}
+            onCitationClick={handleCitationClick}
+            onGenerateSummary={() => handleGenerateSummary(selectedDocument, false)}
+            onRiskAnalysis={handleRiskAnalysis}
+            onDefineTerm={handleDefineTerm}
+            isLoading={isLoading}
+            loadingAction={loadingAction}
+          />
+        </div>
       </div>
        <input
         type="file"

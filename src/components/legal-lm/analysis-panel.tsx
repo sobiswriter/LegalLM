@@ -230,17 +230,13 @@ const ChatView = ({ document, messages, onSendMessage, onCitationClick, onGenera
 
 
 export function AnalysisPanel(props: AnalysisPanelProps) {
-  if (!props.document) {
-    return (
-      <main className="w-[580px] flex-shrink-0 flex flex-col">
-        <WelcomeView />
-      </main>
-    );
-  }
-
   return (
-    <main className="w-[580px] flex-shrink-0 flex flex-col bg-card border-l h-screen">
-      <ChatView {...props} />
+    <main className="flex flex-col bg-card border-l h-screen">
+      {!props.document ? (
+        <WelcomeView />
+      ) : (
+        <ChatView {...props} />
+      )}
     </main>
   );
 }
