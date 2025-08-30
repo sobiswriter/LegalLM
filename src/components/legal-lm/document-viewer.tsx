@@ -46,86 +46,83 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
 
 
   useEffect(() => {
-    if (viewerContent && viewerContainerRef.current) {
-      const { quote } = viewerContent;
-      
-      if (isPdf) {
-        viewerContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-      
-      const element = viewerContainerRef.current;
-      
-      // Use a marker to avoid re-highlighting
-      const highlightedElement = element.querySelector('mark.current-highlight');
-      if (highlightedElement) {
-        highlightedElement.outerHTML = highlightedElement.innerHTML; // Un-wrap
-      }
-      
-      if (!quote) {
-        element.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
+    if (!viewerContent || !viewerContainerRef.current) return;
 
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
-      let node;
-      while (node = walker.nextNode()) {
-        const nodeText = node.nodeValue || '';
-        const matchIndex = nodeText.indexOf(quote);
-        if (matchIndex !== -1) {
-            const range = document.createRange();
-            range.setStart(node, matchIndex);
-            range.setEnd(node, matchIndex + quote.length);
-            
-            const mark = document.createElement('mark');
-            mark.className = "bg-primary/30 animate-pulse rounded-sm current-highlight";
-            range.surroundContents(mark);
-            
-            mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // Clean up the highlight after a delay
-            setTimeout(() => {
-                if (mark.parentNode) {
-                    mark.outerHTML = mark.innerHTML;
-                }
-            }, 3000);
-            
-            break; 
+    const { quote } = viewerContent;
+    const element = viewerContainerRef.current;
+
+    // Remove previous highlight
+    const previousHighlight = element.querySelector('mark.current-highlight');
+    if (previousHighlight) {
+      previousHighlight.outerHTML = previousHighlight.innerHTML;
+    }
+
+    if (!quote) {
+      element.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (isPdf) {
+      element.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // For docx (HTML content)
+    if (isDocx && htmlContent) {
+      const escapedQuote = escapeRegExp(quote);
+      const regex = new RegExp(escapedQuote, 'i'); // Case-insensitive search
+      if (element.innerHTML.match(regex)) {
+        element.innerHTML = element.innerHTML.replace(regex, (match) => `<mark class="bg-primary/30 animate-pulse rounded-sm current-highlight">${match}</mark>`);
+        
+        const newHighlight = element.querySelector('mark.current-highlight');
+        if (newHighlight) {
+          newHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => {
+            if (newHighlight.parentNode) {
+              newHighlight.outerHTML = newHighlight.innerHTML;
+            }
+          }, 3000);
         }
       }
+      return;
     }
-  }, [viewerContent]);
+    
+    // For txt files
+    const walker = window.document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while (node = walker.nextNode()) {
+      const nodeText = node.nodeValue || '';
+      const matchIndex = nodeText.indexOf(quote);
+      if (matchIndex !== -1) {
+          const range = document.createRange();
+          range.setStart(node, matchIndex);
+          range.setEnd(node, matchIndex + quote.length);
+          
+          const mark = document.createElement('mark');
+          mark.className = "bg-primary/30 animate-pulse rounded-sm current-highlight";
+          range.surroundContents(mark);
+          
+          mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          setTimeout(() => {
+              if (mark.parentNode) {
+                  mark.outerHTML = mark.innerHTML;
+              }
+          }, 3000);
+          
+          break; 
+      }
+    }
+  }, [viewerContent, isDocx, htmlContent]);
   
   const highlightedContent = useMemo(() => {
-    if (isPdf || isDocx) {
+    if (!document || isPdf || isDocx) {
       return null;
     }
     
-    if (!textContent) {
-      return <pre className="p-4 text-sm whitespace-pre-wrap font-sans"></pre>;
-    }
-    
-    if (!viewerContent?.quote) {
-      return <pre className="p-4 text-sm whitespace-pre-wrap font-sans">{textContent}</pre>;
-    }
+    return <pre className="p-4 text-sm whitespace-pre-wrap font-sans">{textContent}</pre>;
 
-    const { quote } = viewerContent;
-    const escapedQuote = escapeRegExp(quote);
-    const parts = textContent.split(new RegExp(`(${escapedQuote})`, 'gi'));
-
-    return (
-      <pre className="p-4 text-sm whitespace-pre-wrap font-sans">
-        {parts.map((part, i) =>
-          part.toLowerCase() === quote.toLowerCase() ? (
-            <mark key={i} className="bg-primary/30 animate-pulse rounded-sm">{part}</mark>
-          ) : (
-            part
-          )
-        )}
-      </pre>
-    );
-
-  }, [textContent, viewerContent, isPdf, isDocx]);
+  }, [textContent, document, isPdf, isDocx]);
 
 
   return (
