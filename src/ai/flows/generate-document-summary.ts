@@ -10,22 +10,28 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import pdf from 'pdf-parse';
+
 
 // Helper to extract text from a data URI
-const extractTextFromDataUri = (dataUri: string, fileName: string): string => {
+const extractTextFromDataUri = async (dataUri: string, fileName: string): Promise<string> => {
   const extension = fileName.split('.').pop()?.toLowerCase();
   const base64 = dataUri.substring(dataUri.indexOf(',') + 1);
-  const decoded = Buffer.from(base64, 'base64').toString('utf8');
+  const buffer = Buffer.from(base64, 'base64');
 
   if (extension === 'pdf') {
-    // In a real implementation, you would use a PDF parsing library.
-    // For this simulation, we'll return a placeholder for PDFs.
-    console.log("PDF detected. Using placeholder text extraction.");
-    return `[Text extracted from ${fileName}] ... ` + decoded.substring(0, 4000);
+    try {
+        const data = await pdf(buffer);
+        return data.text;
+    } catch (error) {
+        console.error('Error parsing PDF:', error);
+        // Return a descriptive error if PDF parsing fails
+        return `Error: Could not extract text from ${fileName}. The file may be corrupted or in an unsupported format.`;
+    }
   }
   
   // For .txt and other files, return the decoded content
-  return decoded;
+  return buffer.toString('utf8');
 };
 
 
@@ -86,13 +92,10 @@ const generateDocumentSummaryFlow = ai.defineFlow(
     name: 'generateDocumentSummaryFlow',
     inputSchema: GenerateDocumentSummaryInputSchema,
     outputSchema: GenerateDocumentSummaryOutputSchema,
-    tools: [extractTextTool],
   },
   async ({documentDataUri, documentName}) => {
-    const extractedText = await extractTextTool({
-      dataUri: documentDataUri,
-      fileName: documentName,
-    });
+    
+    const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
 
     const {output} = await summaryPrompt({
       documentName,
