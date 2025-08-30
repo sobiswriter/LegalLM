@@ -2,9 +2,7 @@ export interface Document {
   id: number;
   name: string;
   summary: string;
-  responses: {
-    [key: string]: string;
-  };
+  content: string; // Base64 encoded content
 }
 
 export interface Message {

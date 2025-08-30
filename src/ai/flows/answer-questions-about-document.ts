@@ -12,12 +12,16 @@ import {z} from 'genkit';
 
 const AnswerQuestionsAboutDocumentInputSchema = z.object({
   question: z.string().describe('The question about the legal document.'),
-  documentContent: z.string().describe('The content of the legal document.'),
+  documentContent: z
+    .string()
+    .describe(
+      'The content of the legal document as a data URI (e.g., data:application/pdf;base64,...).'
+    ),
 });
 export type AnswerQuestionsAboutDocumentInput = z.infer<typeof AnswerQuestionsAboutDocumentInputSchema>;
 
 const AnswerQuestionsAboutDocumentOutputSchema = z.object({
-  answer: z.string().describe('The answer to the question, with citations.'),
+  answer: z.string().describe('The answer to the question, with citations, in HTML format.'),
 });
 export type AnswerQuestionsAboutDocumentOutput = z.infer<typeof AnswerQuestionsAboutDocumentOutputSchema>;
 
@@ -29,12 +33,13 @@ const prompt = ai.definePrompt({
   name: 'answerQuestionsAboutDocumentPrompt',
   input: {schema: AnswerQuestionsAboutDocumentInputSchema},
   output: {schema: AnswerQuestionsAboutDocumentOutputSchema},
-  prompt: `You are a legal expert. You will answer questions about a legal document.
-  When you answer, you must cite the specific parts of the document that support your answer. Use superscript numbers as in footnote to indicate the citation.
-  For example: "The contract is valid until June 1, 2024¹."
+  prompt: `You are a legal expert. You will answer questions based ONLY on the provided legal document.
+  Format your output as clean, semantic HTML using <p> tags.
+  When you answer, you MUST cite the specific parts of the document that support your answer. Use superscript numbers like a footnote to indicate the citation.
+  For example: "<p>The contract is valid until June 1, 2024<sup>1</sup>.</p>"
 
   Question: {{{question}}}
-  Document Content: {{{documentContent}}}`,
+  Document: {{media url=documentContent}}`,
 });
 
 const answerQuestionsAboutDocumentFlow = ai.defineFlow(

@@ -1,30 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import type { Document, Message } from '@/lib/types';
 import { SourcesPanel } from '@/components/legal-lm/sources-panel';
 import { AnalysisPanel } from '@/components/legal-lm/analysis-panel';
-
-const MOCK_DOCUMENTS: Document[] = [
-  {
-    id: 1,
-    name: 'Rental_Agreement.pdf',
-    summary: `<h3>Summary of Rental Agreement</h3><p>This agreement is between 'Landlord' and 'Tenant'<sup>1</sup>. The lease duration is 12 months, commencing on September 1, 2025<sup>2</sup>. The monthly rent is set at $1,500, due on the first of each month<sup>3</sup>. A security deposit of $1,500 is required upon signing<sup>4</sup>.</p><p>The tenant is responsible for all utilities except for water<sup>5</sup>. Pets are not allowed without prior written consent from the landlord<sup>6</sup>.</p>`,
-    responses: {
-      'what is the rent amount': `<p>The monthly rent is $1,500, as stated in the agreement<sup>3</sup>.</p>`,
-      'default': `<p>I am a simple mock AI. I can only answer "what is the rent amount". Please try that question to see a simulated response<sup>7</sup>.</p>`
-    }
-  },
-  {
-    id: 2,
-    name: 'Loan_Terms.txt',
-    summary: `<h3>Summary of Loan Terms</h3><p>This is a personal loan agreement for the principal amount of $10,000<sup>8</sup>. The annual interest rate is 5%<sup>9</sup>. The loan term is 5 years, with monthly payments of $188.71<sup>10</sup>.</p><p>There is a late fee of 5% of the payment amount for any payments more than 10 days overdue<sup>11</sup>.</p>`,
-    responses: {
-      'what is the interest rate': `<p>The annual interest rate for this loan is 5%<sup>9</sup>.</p>`,
-      'default': `<p>I am a simple mock AI. I can only answer "what is the interest rate". Please try that question to see a simulated response<sup>12</sup>.</p>`
-    }
-  }
-];
+import { generateDocumentSummary } from '@/ai/flows/generate-document-summary';
+import { answerQuestionsAboutDocument } from '@/ai/flows/answer-questions-about-document';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function LegalLMPage() {
@@ -32,63 +14,110 @@ export default function LegalLMPage() {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAddingDoc, setIsAddingDoc] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    // Start with one document loaded and selected
-    const initialDoc = MOCK_DOCUMENTS[0];
-    setDocuments([initialDoc]);
-    setSelectedDocument(initialDoc);
-    setMessages([{ id: Date.now(), sender: 'ai', content: initialDoc.summary }]);
-  }, []);
-
-  const handleAddDocument = () => {
-    if (documents.length < MOCK_DOCUMENTS.length) {
-      setIsAddingDoc(true);
-      setTimeout(() => {
-        const nextDoc = MOCK_DOCUMENTS[documents.length];
-        setDocuments(prev => [...prev, nextDoc]);
-        handleSelectDocument(nextDoc);
-        setIsAddingDoc(false);
-      }, 1000); // Simulate upload delay
-    }
+  const handleAddDocumentClick = () => {
+    fileInputRef.current?.click();
   };
+  
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsAddingDoc(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const dataUri = e.target?.result as string;
+        try {
+          const { summary } = await generateDocumentSummary({ documentDataUri: dataUri, documentName: file.name });
+          const newDoc: Document = {
+            id: Date.now(),
+            name: file.name,
+            summary: `<h3>Summary of ${file.name}</h3>${summary}`,
+            content: dataUri, // we'll use this to answer questions
+          };
+          setDocuments(prev => [...prev, newDoc]);
+          handleSelectDocument(newDoc);
+        } catch (error) {
+          console.error('Error generating summary:', error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to generate document summary. Please try again.",
+          });
+        } finally {
+          setIsAddingDoc(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+        console.error('Error processing file:', error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not process the uploaded file.",
+        });
+        setIsAddingDoc(false);
+    }
+
+    // Reset file input
+    event.target.value = '';
+  };
+
 
   const handleSelectDocument = (doc: Document) => {
     setSelectedDocument(doc);
     setMessages([{ id: Date.now(), sender: 'ai', content: doc.summary }]);
   };
 
-  const handleSendMessage = (content: string) => {
-    if (!selectedDocument) return;
+  const handleSendMessage = async (content: string) => {
+    if (!selectedDocument?.content) return;
 
-    // Add user message
     const userMessage: Message = { id: Date.now(), sender: 'user', content };
     setMessages(prev => [...prev, userMessage]);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const query = content.toLowerCase().trim();
-      const responseContent = selectedDocument.responses[query] || selectedDocument.responses['default'];
-      const aiMessage: Message = { id: Date.now() + 1, sender: 'ai', content: responseContent };
+    try {
+      const { answer } = await answerQuestionsAboutDocument({
+        question: content,
+        documentContent: selectedDocument.content,
+      });
+
+      const aiMessage: Message = { id: Date.now() + 1, sender: 'ai', content: answer };
       setMessages(prev => [...prev, aiMessage]);
-    }, 800);
+
+    } catch (error) {
+      console.error('Error getting answer:', error);
+      const errorMessage: Message = { id: Date.now() + 1, sender: 'ai', content: "Sorry, I encountered an error trying to answer your question." };
+      setMessages(prev => [...prev, errorMessage]);
+    }
   };
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
-      <SourcesPanel
-        documents={documents}
-        selectedDocument={selectedDocument}
-        onAddDocument={handleAddDocument}
-        onSelectDocument={handleSelectDocument}
-        isUploading={isAddingDoc}
-        canUpload={documents.length < MOCK_DOCUMENTS.length}
+    <>
+      <div className="flex h-screen w-full bg-background overflow-hidden">
+        <SourcesPanel
+          documents={documents}
+          selectedDocument={selectedDocument}
+          onAddDocument={handleAddDocumentClick}
+          onSelectDocument={handleSelectDocument}
+          isUploading={isAddingDoc}
+          canUpload={true}
+        />
+        <AnalysisPanel
+          document={selectedDocument}
+          messages={messages}
+          onSendMessage={handleSendMessage}
+        />
+      </div>
+       <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept=".txt,.pdf"
       />
-      <AnalysisPanel
-        document={selectedDocument}
-        messages={messages}
-        onSendMessage={handleSendMessage}
-      />
-    </div>
+    </>
   );
 }

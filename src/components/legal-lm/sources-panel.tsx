@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { Document } from '@/lib/types';
@@ -35,7 +34,6 @@ export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSel
           )}
           {isUploading ? 'Uploading...' : 'Upload Document'}
         </Button>
-         {!canUpload && !isUploading && <p className="text-xs text-muted-foreground mt-2 text-center">All mock documents have been uploaded.</p>}
       </div>
       <div className="flex flex-col flex-1 min-h-0">
           <p className="px-4 pb-2 text-sm font-medium text-muted-foreground">Sources</p>
@@ -55,6 +53,11 @@ export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSel
                   <span className="truncate text-sm font-medium text-card-foreground">{doc.name}</span>
                 </button>
               ))}
+              {documents.length === 0 && !isUploading && (
+                <div className="text-center text-sm text-muted-foreground pt-8">
+                  <p>Upload your first document to get started.</p>
+                </div>
+              )}
             </div>
           </ScrollArea>
       </div>
