@@ -50,10 +50,8 @@ export default function LegalLMPage() {
             content: dataUri,
           };
           setDocuments(prev => [...prev, newDoc]);
-          if (!selectedDocument) {
-            handleSelectDocument(newDoc);
-          }
-
+          // This will trigger the initial summary generation
+          handleSelectDocument(newDoc); 
         } catch (error) {
           console.error('Error processing file:', error);
           toast({

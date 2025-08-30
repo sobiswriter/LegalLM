@@ -75,9 +75,14 @@ The user has uploaded a document named {{{documentName}}}.
 The content of the document is:
 {{{documentContent}}}
 
-Provide a concise summary of its key components (e.g., Parties, Term, Key Obligations, and Risks). 
+Provide a concise summary of its key components (e.g., Parties, Term, Key Obligations, and Risks).
 Format your output as clean, semantic HTML using <p> and <h3> tags.
-For every piece of information you provide, you MUST cite the relevant section by adding a superscript number. In addition, you must add a 'data-quote' attribute to the superscript tag containing the exact text from the document being cited. For example: <sup data-quote="This is the exact text being cited.">1</sup>. Do not include the quote in the main body of the summary itself.`,
+For every piece of information you provide, you MUST cite the relevant section by adding a superscript number.
+For each citation, you MUST add a 'data-quote' attribute to the superscript tag containing the exact text from the document being cited.
+Crucially, do NOT include the quoted text in the main body of the summary itself. Only the superscript number should be visible in the flow of the text.
+
+For example, a correct citation looks like this: <p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>
+A WRONG citation looks like this: <p>The contract is valid until June 1, 2024, "the contract is valid until June 1, 2024" [1].</p>`,
 });
 
 
