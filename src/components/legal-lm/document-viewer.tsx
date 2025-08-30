@@ -49,23 +49,52 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
     if (viewerContent && viewerContainerRef.current) {
       const { quote } = viewerContent;
       
-      if (isPdf || isDocx || !quote) {
+      if (isPdf) {
         viewerContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
       
       const element = viewerContainerRef.current;
-      const match = textContent.indexOf(quote);
       
-      if (match !== -1) {
-        const textBeforeMatch = textContent.substring(0, match);
-        const lines = textBeforeMatch.split('\n').length;
-        const scrollPosition = lines * 1.5 * 16; 
+      // Use a marker to avoid re-highlighting
+      const highlightedElement = element.querySelector('mark.current-highlight');
+      if (highlightedElement) {
+        highlightedElement.outerHTML = highlightedElement.innerHTML; // Un-wrap
+      }
+      
+      if (!quote) {
+        element.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
 
-        element.scrollTo({ top: scrollPosition, behavior: 'smooth' });
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+      let node;
+      while (node = walker.nextNode()) {
+        const nodeText = node.nodeValue || '';
+        const matchIndex = nodeText.indexOf(quote);
+        if (matchIndex !== -1) {
+            const range = document.createRange();
+            range.setStart(node, matchIndex);
+            range.setEnd(node, matchIndex + quote.length);
+            
+            const mark = document.createElement('mark');
+            mark.className = "bg-primary/30 animate-pulse rounded-sm current-highlight";
+            range.surroundContents(mark);
+            
+            mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Clean up the highlight after a delay
+            setTimeout(() => {
+                if (mark.parentNode) {
+                    mark.outerHTML = mark.innerHTML;
+                }
+            }, 3000);
+            
+            break; 
+        }
       }
     }
-  }, [viewerContent, isPdf, isDocx, textContent]);
+  }, [viewerContent]);
   
   const highlightedContent = useMemo(() => {
     if (isPdf || isDocx) {
@@ -103,10 +132,10 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
     <section className="flex-1 flex flex-col bg-background h-screen">
       <div className="p-4 border-b shrink-0 flex items-center justify-between">
         <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Document Viewer'}</h2>
-        {(isPdf || isDocx) && (
+        {isPdf && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <AlertCircle className="w-4 h-4" />
-                <span>Citation highlighting is not available for {isPdf ? 'PDFs' : 'DOCX files'}.</span>
+                <span>Citation highlighting is not available for PDFs.</span>
             </div>
         )}
       </div>
