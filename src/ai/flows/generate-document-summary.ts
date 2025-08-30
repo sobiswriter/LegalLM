@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import pdf from 'pdf-parse';
 
 
 // Helper to extract text from a data URI
@@ -20,14 +19,8 @@ const extractTextFromDataUri = async (dataUri: string, fileName: string): Promis
   const buffer = Buffer.from(base64, 'base64');
 
   if (extension === 'pdf') {
-    try {
-        const data = await pdf(buffer);
-        return data.text;
-    } catch (error) {
-        console.error('Error parsing PDF:', error);
-        // Return a descriptive error if PDF parsing fails
-        return `Error: Could not extract text from ${fileName}. The file may be corrupted or in an unsupported format.`;
-    }
+      // Return an error for now
+      return `Error: PDF processing is not currently supported. Please upload a .txt file.`;
   }
   
   // For .txt and other files, return the decoded content
