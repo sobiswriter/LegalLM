@@ -69,12 +69,21 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
   }, [viewerContent, isPdf, textContent]);
   
   const highlightedContent = useMemo(() => {
-    if (isPdf || !textContent || !viewerContent?.quote) {
-      return textContent;
+    if (isPdf) {
+      return null;
     }
+    
+    if (!textContent) {
+      return <pre className="p-4 text-sm whitespace-pre-wrap font-sans"></pre>;
+    }
+    
+    if (!viewerContent?.quote) {
+      return <pre className="p-4 text-sm whitespace-pre-wrap font-sans">{textContent}</pre>;
+    }
+
     const { quote } = viewerContent;
     const escapedQuote = escapeRegExp(quote);
-    const parts = textContent.split(new RegExp(`(${escapedQuote})`, 'g'));
+    const parts = textContent.split(new RegExp(`(${escapedQuote})`, 'gi'));
 
     return (
       <pre className="p-4 text-sm whitespace-pre-wrap font-sans">

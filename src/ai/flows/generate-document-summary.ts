@@ -77,7 +77,7 @@ The content of the document is:
 
 Provide a concise summary of its key components (e.g., Parties, Term, Key Obligations, and Risks). 
 Format your output as clean, semantic HTML using <p> and <h3> tags.
-For every piece of information you provide, you MUST cite the relevant section by adding a superscript number and a data-quote attribute containing the exact text from the document being cited. For example: <sup data-quote="This is the exact text being cited.">1</sup>`,
+For every piece of information you provide, you MUST cite the relevant section by adding a superscript number. In addition, you must add a 'data-quote' attribute to the superscript tag containing the exact text from the document being cited. For example: <sup data-quote="This is the exact text being cited.">1</sup>. Do not include the quote in the main body of the summary itself.`,
 });
 
 

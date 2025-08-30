@@ -85,7 +85,7 @@ export default function LegalLMPage() {
     setSelectedDocument(doc);
     setMessages([]);
     // Immediately trigger summary generation for the selected doc
-    handleGenerateSummary(doc);
+    handleGenerateSummary(doc, true);
   };
 
   const handleCitationClick = (quote: string) => {
@@ -131,12 +131,14 @@ export default function LegalLMPage() {
     }
   };
 
-  const handleGenerateSummary = async (doc: Document | null = selectedDocument) => {
+  const handleGenerateSummary = async (doc: Document | null = selectedDocument, clearChat = false) => {
     if (!doc?.content) return;
     
     setIsLoading(true);
     setLoadingAction('summary');
-    setMessages([]); // Clear previous messages
+    if (clearChat) {
+      setMessages([]); // Clear previous messages
+    }
     try {
       const { summary } = await generateDocumentSummary({ documentDataUri: doc.content, documentName: doc.name });
       addMessage({ sender: 'ai', content: `<h3>Summary of ${doc.name}</h3>${summary}` });
