@@ -70,7 +70,7 @@ body {
     @apply bg-background text-foreground;
   }
   sup {
-    @apply font-bold text-primary cursor-pointer hover:underline text-xs align-super;
+    @apply font-bold text-primary cursor-pointer hover:underline text-xs align-baseline;
   }
   h3 {
     @apply text-xl font-semibold mb-2;
