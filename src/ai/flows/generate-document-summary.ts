@@ -4,7 +4,7 @@
  * @fileOverview This file defines a Genkit flow for generating a summary of a legal document.
  *
  * - generateDocumentSummary - A function that takes a document data URI as input and returns a summary of the document.
- * - GenerateDocumentSummaryInput - The input type for the generateDocumentSummary function.
+ * - GenerateDocumentSummaryInput - The input type for the generateDocumentsummary function.
  * - GenerateDocumentSummaryOutput - The return type for the generateDocumentSummary function.
  */
 
@@ -61,36 +61,44 @@ const extractTextTool = ai.defineTool(
     async ({ dataUri, fileName }) => extractTextFromDataUri(dataUri, fileName)
 );
 
-
-const prompt = ai.definePrompt({
-  name: 'generateDocumentSummaryPrompt',
-  input: {schema: GenerateDocumentSummaryInputSchema},
+const summaryPrompt = ai.definePrompt({
+  name: 'summaryPrompt',
+  input: {
+    schema: z.object({
+      documentName: z.string(),
+      documentContent: z.string(),
+    }),
+  },
   output: {schema: GenerateDocumentSummaryOutputSchema},
-  tools: [extractTextTool],
   prompt: `You are a highly skilled legal assistant. Your task is to summarize legal documents.
-The user has uploaded a document named {{{documentName}}}. First, use the extractTextTool to get the text content.
-Then, provide a concise summary of its key components (e.g., Parties, Term, Key Obligations, and Risks). 
+The user has uploaded a document named {{{documentName}}}. 
+The content of the document is:
+{{{documentContent}}}
+
+Provide a concise summary of its key components (e.g., Parties, Term, Key Obligations, and Risks). 
 Format your output as clean, semantic HTML using <p> and <h3> tags.
 For every piece of information you provide, you MUST cite the relevant section by adding a superscript number like a footnote.`,
 });
+
 
 const generateDocumentSummaryFlow = ai.defineFlow(
   {
     name: 'generateDocumentSummaryFlow',
     inputSchema: GenerateDocumentSummaryInputSchema,
     outputSchema: GenerateDocumentSummaryOutputSchema,
+    tools: [extractTextTool],
   },
-  async (input) => {
-    const llmResponse = await prompt(input);
-    const toolRequest = llmResponse.toolRequest();
-    
-    if (!toolRequest || toolRequest.tool.name !== 'extractTextTool') {
-        throw new Error('Expected the model to use the extractTextTool.');
-    }
+  async ({documentDataUri, documentName}) => {
+    const extractedText = await extractTextTool({
+      dataUri: documentDataUri,
+      fileName: documentName,
+    });
 
-    const toolResponse = await toolRequest.run();
+    const {output} = await summaryPrompt({
+      documentName,
+      documentContent: extractedText,
+    });
 
-    const finalResponse = await llmResponse.continue(toolResponse);
-    return finalResponse.output!;
+    return output!;
   }
 );
