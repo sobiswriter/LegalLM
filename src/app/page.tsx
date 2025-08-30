@@ -14,14 +14,9 @@ export default function LegalLMPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [riskAnalysis, setRiskAnalysis] = useState<string | null>(null);
-  const [termDefinition, setTermDefinition] = useState<string | null>(null);
-
-  const [isAddingDoc, setIsAddingDoc] = useState(false);
-  const [isAnswering, setIsAnswering] = useState(false);
-  const [isAnalyzingRisks, setIsAnalyzingRisks] = useState(false);
-  const [isDefiningTerm, setIsDefiningTerm] = useState(false);
   
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [highlightedDoc, setHighlightedDoc] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,29 +25,36 @@ export default function LegalLMPage() {
   const handleAddDocumentClick = () => {
     fileInputRef.current?.click();
   };
-  
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsAddingDoc(true);
-    setRiskAnalysis(null);
-    setTermDefinition(null);
-    
+    setIsLoading(true);
+    setLoadingAction('summary');
+
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const dataUri = e.target?.result as string;
         try {
-          const { summary } = await generateDocumentSummary({ documentDataUri: dataUri, documentName: file.name });
           const newDoc: Document = {
             id: Date.now(),
             name: file.name,
-            summary: `<h3>Summary of ${file.name}</h3>${summary}`,
+            summary: '', // Summary will be generated and added as a message
             content: dataUri,
           };
           setDocuments(prev => [...prev, newDoc]);
           handleSelectDocument(newDoc);
+          
+          const { summary } = await generateDocumentSummary({ documentDataUri: dataUri, documentName: file.name });
+          const summaryMessage: Message = {
+            id: Date.now() + 1,
+            sender: 'ai',
+            content: `<h3>Summary of ${file.name}</h3>${summary}`
+          };
+          setMessages([summaryMessage]);
+
         } catch (error) {
           console.error('Error generating summary:', error);
           toast({
@@ -61,7 +63,8 @@ export default function LegalLMPage() {
             description: "Failed to generate document summary. Please try again.",
           });
         } finally {
-          setIsAddingDoc(false);
+          setIsLoading(false);
+          setLoadingAction(null);
         }
       };
       reader.readAsDataURL(file);
@@ -72,7 +75,8 @@ export default function LegalLMPage() {
             title: "Error",
             description: "Could not process the uploaded file.",
         });
-        setIsAddingDoc(false);
+        setIsLoading(false);
+        setLoadingAction(null);
     }
 
     event.target.value = '';
@@ -80,11 +84,11 @@ export default function LegalLMPage() {
 
   const handleSelectDocument = (doc: Document) => {
     setSelectedDocument(doc);
-    setMessages([{ id: Date.now(), sender: 'ai', content: doc.summary }]);
-    setRiskAnalysis(null);
-    setTermDefinition(null);
+    setMessages([]);
+    // Immediately trigger summary generation for the selected doc
+    handleGenerateSummary(doc);
   };
-  
+
   const handleCitationClick = () => {
     if (!selectedDocument) return;
     setHighlightedDoc(selectedDocument.id);
@@ -93,69 +97,84 @@ export default function LegalLMPage() {
     }, 1000);
   };
 
+  const addMessage = (message: Omit<Message, 'id'>) => {
+    setMessages(prev => [...prev, { ...message, id: Date.now() }]);
+  };
+
   const handleSendMessage = async (content: string) => {
     if (!selectedDocument?.content) return;
 
-    const userMessage: Message = { id: Date.now(), sender: 'user', content };
-    setMessages(prev => [...prev, userMessage]);
-    setIsAnswering(true);
+    addMessage({ sender: 'user', content });
+    setIsLoading(true);
+    setLoadingAction('qna');
 
     try {
       const { answer } = await answerQuestionsAboutDocument({
         question: content,
         documentContent: selectedDocument.content,
       });
-
-      const aiMessage: Message = { id: Date.now() + 1, sender: 'ai', content: answer };
-      setMessages(prev => [...prev, aiMessage]);
-
+      addMessage({ sender: 'ai', content: answer });
     } catch (error) {
       console.error('Error getting answer:', error);
-      const errorMessage: Message = { id: Date.now() + 1, sender: 'ai', content: "Sorry, I encountered an error trying to answer your question." };
-      setMessages(prev => [...prev, errorMessage]);
+      addMessage({ sender: 'ai', content: "Sorry, I encountered an error trying to answer your question." });
     } finally {
-        setIsAnswering(false);
+        setIsLoading(false);
+        setLoadingAction(null);
+    }
+  };
+
+  const handleGenerateSummary = async (doc: Document | null = selectedDocument) => {
+    if (!doc?.content) return;
+    
+    setIsLoading(true);
+    setLoadingAction('summary');
+    try {
+      const { summary } = await generateDocumentSummary({ documentDataUri: doc.content, documentName: doc.name });
+      addMessage({ sender: 'ai', content: `<h3>Summary of ${doc.name}</h3>${summary}` });
+    } catch (error) {
+       console.error('Error generating summary:', error);
+      addMessage({ sender: 'ai', content: `Sorry, I couldn't generate a summary for ${doc.name}.` });
+    } finally {
+      setIsLoading(false);
+      setLoadingAction(null);
     }
   };
 
   const handleRiskAnalysis = async () => {
     if (!selectedDocument?.content) return;
     
-    setIsAnalyzingRisks(true);
+    setIsLoading(true);
+    setLoadingAction('risks');
     try {
       const { analysis } = await identifyRisksAndClauses({ documentContent: selectedDocument.content });
-      setRiskAnalysis(analysis);
+      addMessage({ sender: 'ai', content: analysis });
     } catch (error) {
       console.error('Error analyzing risks:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to analyze risks and clauses.",
-      });
+      addMessage({ sender: 'ai', content: "Sorry, I failed to analyze risks and clauses." });
     } finally {
-      setIsAnalyzingRisks(false);
+      setIsLoading(false);
+      setLoadingAction(null);
     }
   };
 
   const handleDefineTerm = async (term: string) => {
     if (!selectedDocument?.content || !term.trim()) return;
 
-    setIsDefiningTerm(true);
+    addMessage({ sender: 'user', content: `Define: "${term}"` });
+    setIsLoading(true);
+    setLoadingAction('jargon');
     try {
       const { definition } = await defineLegalTerm({
         term,
         documentContent: selectedDocument.content,
       });
-      setTermDefinition(definition);
+      addMessage({ sender: 'ai', content: definition });
     } catch (error) {
       console.error('Error defining term:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to define the legal term.",
-      });
+      addMessage({ sender: 'ai', content: `Sorry, I failed to define "${term}".` });
     } finally {
-      setIsDefiningTerm(false);
+      setIsLoading(false);
+      setLoadingAction(null);
     }
   };
 
@@ -168,24 +187,20 @@ export default function LegalLMPage() {
           selectedDocument={selectedDocument}
           onAddDocument={handleAddDocumentClick}
           onSelectDocument={handleSelectDocument}
-          isUploading={isAddingDoc}
+          isUploading={isLoading && loadingAction === 'summary'}
           highlightedDocId={highlightedDoc}
-          canUpload={true}
+          canUpload={!isLoading}
         />
         <AnalysisPanel
           document={selectedDocument}
           messages={messages}
           onSendMessage={handleSendMessage}
-          isAnswering={isAnswering}
           onCitationClick={handleCitationClick}
-          
-          riskAnalysis={riskAnalysis}
+          onGenerateSummary={() => handleGenerateSummary()}
           onRiskAnalysis={handleRiskAnalysis}
-          isAnalyzingRisks={isAnalyzingRisks}
-
-          termDefinition={termDefinition}
           onDefineTerm={handleDefineTerm}
-          isDefiningTerm={isDefiningTerm}
+          isLoading={isLoading}
+          loadingAction={loadingAction}
         />
       </div>
        <input

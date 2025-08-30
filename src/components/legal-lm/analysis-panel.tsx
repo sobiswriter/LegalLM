@@ -5,27 +5,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Feather, SendHorizonal, User, FileWarning, BookOpen, Search } from 'lucide-react';
+import { Feather, SendHorizonal, User, FileWarning, BookOpen, Search, FileText, Loader2 } from 'lucide-react';
 import type { Document, Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface AnalysisPanelProps {
   document: Document | null;
   messages: Message[];
   onSendMessage: (content: string) => void;
-  isAnswering: boolean;
   onCitationClick: (citationId: string) => void;
   
-  riskAnalysis: string | null;
+  onGenerateSummary: () => void;
   onRiskAnalysis: () => void;
-  isAnalyzingRisks: boolean;
-
-  termDefinition: string | null;
   onDefineTerm: (term: string) => void;
-  isDefiningTerm: boolean;
+
+  isLoading: boolean;
+  loadingAction: string | null;
 }
 
 const WelcomeView = () => (
@@ -104,46 +101,71 @@ const ThinkingMessage = () => (
     </div>
 );
 
-const SummaryView = ({ messages, onCitationClick }: { messages: Message[], onCitationClick: (citationId: string) => void }) => (
-    <ScrollArea className="h-full">
-        <div className="p-6">
-            {messages.map(msg => (
-              <ChatMessage key={msg.id} message={msg} onCitationClick={onCitationClick} />
-            ))}
+
+const ActionToolbar = ({ onGenerateSummary, onRiskAnalysis, onDefineTerm, isLoading, loadingAction }: Pick<AnalysisPanelProps, 'onGenerateSummary' | 'onRiskAnalysis' | 'onDefineTerm' | 'isLoading' | 'loadingAction'>) => {
+    const [term, setTerm] = useState('');
+
+    const handleDefineSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (term.trim() && !isLoading) {
+            onDefineTerm(term.trim());
+            setTerm('');
+        }
+    };
+
+    return (
+        <div className="px-6 py-3 border-t bg-background/80 backdrop-blur-sm">
+            <div className="flex flex-wrap items-center gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onGenerateSummary}
+                    disabled={isLoading}
+                >
+                    {isLoading && loadingAction === 'summary' ? (
+                        <Loader2 className="animate-spin" />
+                    ) : (
+                        <FileText />
+                    )}
+                    Re-summarize
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onRiskAnalysis}
+                    disabled={isLoading}
+                >
+                    {isLoading && loadingAction === 'risks' ? (
+                        <Loader2 className="animate-spin" />
+                    ) : (
+                        <FileWarning />
+                    )}
+                    Analyze Risks
+                </Button>
+                <form onSubmit={handleDefineSubmit} className="flex items-center gap-2 flex-1 sm:flex-initial sm:min-w-[300px]">
+                    <Input
+                        value={term}
+                        onChange={e => setTerm(e.target.value)}
+                        placeholder="Define a legal term..."
+                        className="h-9 text-sm flex-1"
+                        disabled={isLoading}
+                    />
+                    <Button type="submit" size="icon" variant="outline" className="h-9 w-9" disabled={!term.trim() || isLoading}>
+                        {isLoading && loadingAction === 'jargon' ? (
+                            <Loader2 className="animate-spin" />
+                        ) : (
+                            <Search className="w-4 h-4" />
+                        )}
+                        <span className="sr-only">Define Term</span>
+                    </Button>
+                </form>
+            </div>
         </div>
-    </ScrollArea>
-);
+    );
+};
 
-const RiskAnalysisView = ({ analysis, onAnalyze, isLoading }: { analysis: string | null, onAnalyze: () => void, isLoading: boolean }) => (
-    <div className="p-6 h-full flex flex-col">
-        {!analysis && !isLoading && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <FileWarning className="w-12 h-12 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Identify Risks &amp; Key Clauses</h3>
-                <p className="text-muted-foreground mb-4 max-w-md">Analyze the document to automatically identify potential legal risks, important obligations, and critical clauses.</p>
-                <Button onClick={onAnalyze}>Analyze Now</Button>
-            </div>
-        )}
-        {isLoading && (
-            <div className="space-y-4">
-                <Skeleton className="h-8 w-1/3" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-4/5" />
-                <br/>
-                <Skeleton className="h-8 w-1/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-            </div>
-        )}
-        {analysis && !isLoading &&(
-            <ScrollArea className="flex-1">
-                <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: analysis }} />
-            </ScrollArea>
-        )}
-    </div>
-);
 
-const QandAView = ({ messages, onSendMessage, isAnswering, onCitationClick }: { messages: Message[], onSendMessage: (content: string) => void, isAnswering: boolean, onCitationClick: (citationId: string) => void }) => {
+const ChatView = ({ document, messages, onSendMessage, onCitationClick, onGenerateSummary, onRiskAnalysis, onDefineTerm, isLoading, loadingAction }: AnalysisPanelProps) => {
     const [input, setInput] = useState('');
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -154,11 +176,11 @@ const QandAView = ({ messages, onSendMessage, isAnswering, onCitationClick }: { 
                 viewport.scrollTop = viewport.scrollHeight;
             }
         }
-    }, [messages, isAnswering]);
+    }, [messages, isLoading]);
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (input.trim() && !isAnswering) {
+        if (input.trim() && !isLoading) {
           onSendMessage(input.trim());
           setInput('');
         }
@@ -168,95 +190,43 @@ const QandAView = ({ messages, onSendMessage, isAnswering, onCitationClick }: { 
         <div className="flex flex-col h-full">
             <ScrollArea className="flex-1" ref={scrollAreaRef}>
                 <div className="p-6">
-                    {messages.slice(1).map(msg => (
+                    {messages.map(msg => (
                         <ChatMessage key={msg.id} message={msg} onCitationClick={onCitationClick} />
                     ))}
-                    {isAnswering && <ThinkingMessage />}
+                    {isLoading && <ThinkingMessage />}
                 </div>
             </ScrollArea>
+            
+            <ActionToolbar 
+                onGenerateSummary={onGenerateSummary}
+                onRiskAnalysis={onRiskAnalysis}
+                onDefineTerm={onDefineTerm}
+                isLoading={isLoading}
+                loadingAction={loadingAction}
+            />
+
             <div className="px-6 py-4 border-t bg-background">
                 <form onSubmit={handleFormSubmit} className="flex items-center gap-4">
                     <Input
                         value={input}
                         onChange={e => setInput(e.target.value)}
-                        placeholder="Ask a question about the document..."
+                        placeholder="Ask a follow-up question..."
                         className="flex-1"
-                        disabled={isAnswering}
+                        disabled={isLoading}
                     />
-                    <Button type="submit" size="icon" disabled={!input.trim() || isAnswering}>
+                    <Button type="submit" size="icon" disabled={!input.trim() || isLoading}>
                         <SendHorizonal className="w-4 h-4" />
                         <span className="sr-only">Send message</span>
                     </Button>
                 </form>
             </div>
         </div>
-    )
-};
-
-
-const LegalJargonView = ({ definition, onDefine, isLoading }: { definition: string | null, onDefine: (term: string) => void, isLoading: boolean }) => {
-    const [term, setTerm] = useState('');
-
-    const handleFormSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (term.trim() && !isLoading) {
-            onDefine(term.trim());
-        }
-    };
-
-    return (
-        <div className="p-6 h-full flex flex-col">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                        <BookOpen className="w-5 h-5" />
-                        Define Legal Term
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleFormSubmit} className="flex items-center gap-4">
-                        <Input
-                            value={term}
-                            onChange={e => setTerm(e.target.value)}
-                            placeholder="Enter a term, e.g., 'indemnification'"
-                            className="flex-1"
-                            disabled={isLoading}
-                        />
-                        <Button type="submit" size="icon" disabled={!term.trim() || isLoading}>
-                            <Search className="w-4 h-4" />
-                            <span className="sr-only">Define Term</span>
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
-
-            {(isLoading || definition) && (
-                <Card className="mt-6 flex-1">
-                    <CardContent className="p-6">
-                        {isLoading ? (
-                            <div className="space-y-3">
-                                <Skeleton className="h-5 w-1/4" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-4/5" />
-                            </div>
-                        ) : (
-                            <div
-                                className="prose prose-sm dark:prose-invert max-w-none"
-                                dangerouslySetInnerHTML={{ __html: definition! }}
-                            />
-                        )}
-                    </CardContent>
-                </Card>
-            )}
-        </div>
     );
 };
 
 
 export function AnalysisPanel(props: AnalysisPanelProps) {
-  const { document, messages, onSendMessage, isAnswering, onCitationClick, riskAnalysis, onRiskAnalysis, isAnalyzingRisks, termDefinition, onDefineTerm, isDefiningTerm } = props;
-
-  if (!document) {
+  if (!props.document) {
     return (
       <main className="flex-1 flex flex-col">
         <WelcomeView />
@@ -266,28 +236,7 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
 
   return (
     <main className="flex-1 flex flex-col bg-background h-screen">
-      <Tabs defaultValue="summary" className="flex-1 flex flex-col">
-        <div className="px-6 border-b">
-          <TabsList>
-            <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="risks">Risks &amp; Clauses</TabsTrigger>
-            <TabsTrigger value="qna">Q&amp;A</TabsTrigger>
-            <TabsTrigger value="jargon">Legal Jargon</TabsTrigger>
-          </TabsList>
-        </div>
-        <TabsContent value="summary" className="flex-1 overflow-y-auto">
-          <SummaryView messages={messages.slice(0,1)} onCitationClick={onCitationClick} />
-        </TabsContent>
-        <TabsContent value="risks" className="flex-1 overflow-y-auto">
-          <RiskAnalysisView analysis={riskAnalysis} onAnalyze={onRiskAnalysis} isLoading={isAnalyzingRisks} />
-        </TabsContent>
-        <TabsContent value="qna" className="flex-1 flex flex-col min-h-0">
-          <QandAView messages={messages} onSendMessage={onSendMessage} isAnswering={isAnswering} onCitationClick={onCitationClick} />
-        </TabsContent>
-        <TabsContent value="jargon" className="flex-1 overflow-y-auto">
-           <LegalJargonView definition={termDefinition} onDefine={onDefineTerm} isLoading={isDefiningTerm} />
-        </TabsContent>
-      </Tabs>
+      <ChatView {...props} />
     </main>
   );
 }
