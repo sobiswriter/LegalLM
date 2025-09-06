@@ -28,7 +28,13 @@ const AnswerQuestionsAboutDocumentOutputSchema = z.object({
 export type AnswerQuestionsAboutDocumentOutput = z.infer<typeof AnswerQuestionsAboutDocumentOutputSchema>;
 
 export async function answerQuestionsAboutDocument(input: AnswerQuestionsAboutDocumentInput): Promise<AnswerQuestionsAboutDocumentOutput> {
-  return answerQuestionsAboutDocumentFlow(input);
+  try {
+    return await answerQuestionsAboutDocumentFlow(input);
+  } catch (err: any) {
+    return {
+      answer: `<p class='text-destructive'>${err?.message || 'Could not extract usable text from this document. Please upload a text-based file.'}</p>`
+    };
+  }
 }
 
 const prompt = ai.definePrompt({

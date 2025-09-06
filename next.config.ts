@@ -8,6 +8,23 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  output: 'standalone',
+  serverExternalPackages: ['pdf-parse', 'canvas', 'pdfjs-dist'],
+  webpack: (config, { isServer }) => {
+    // Canvas requires special handling
+    if (isServer) {
+      config.externals = [...(config.externals || []), 'canvas'];
+    }
+
+    // Handle native dependencies
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      canvas: false,
+      encoding: false,
+    };
+
+    return config;
+  },
   images: {
     remotePatterns: [
       {

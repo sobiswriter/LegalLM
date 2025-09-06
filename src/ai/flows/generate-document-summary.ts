@@ -28,7 +28,13 @@ const GenerateDocumentSummaryOutputSchema = z.object({
 export type GenerateDocumentSummaryOutput = z.infer<typeof GenerateDocumentSummaryOutputSchema>;
 
 export async function generateDocumentSummary(input: GenerateDocumentSummaryInput): Promise<GenerateDocumentSummaryOutput> {
-  return generateDocumentSummaryFlow(input);
+  try {
+    return await generateDocumentSummaryFlow(input);
+  } catch (err: any) {
+    return {
+      summary: `<h3>Summary of ${input.documentName}</h3><p class='text-destructive'>${err?.message || 'Could not extract usable text from this document. Please upload a text-based file.'}</p>`
+    };
+  }
 }
 
 const summaryPrompt = ai.definePrompt({

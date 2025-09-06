@@ -55,7 +55,6 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
     let previousHighlight = element.querySelector('mark.current-highlight');
     if (previousHighlight) {
         previousHighlight.outerHTML = previousHighlight.innerHTML;
-        // Reread the element to get the clean DOM
         previousHighlight = element.querySelector('mark.current-highlight');
     }
 
@@ -68,46 +67,51 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
       // PDF highlighting is handled inside the embed, cannot control from here
       return;
     }
-    
+
+    // Normalize function for robust matching
+    const normalize = (str: string) => str.replace(/\s+/g, ' ').trim().toLowerCase();
+    const normQuote = normalize(quote);
+
     // For docx (HTML content) and txt (preformatted text)
     const walker = window.document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
-    let node;
+    let node: Node | null;
     const nodesToReplace: {node: Text, range: Range}[] = [];
 
-    while (node = walker.nextNode()) {
-      if (node.nodeValue) {
-        const matchIndex = node.nodeValue.indexOf(quote);
+    while ((node = walker.nextNode())) {
+      if (node.nodeType === Node.TEXT_NODE && node.nodeValue) {
+        const normNode = normalize(node.nodeValue);
+        const matchIndex = normNode.indexOf(normQuote);
         if (matchIndex !== -1) {
-          const range = document.createRange();
-          range.setStart(node, matchIndex);
-          range.setEnd(node, matchIndex + quote.length);
-          nodesToReplace.push({ node, range });
+          // Find the real index in the original string
+          let origIdx = 0, normIdx = 0;
+          while (origIdx < node.nodeValue.length && normIdx < matchIndex) {
+            if (!/\s/.test(node.nodeValue[origIdx])) normIdx++;
+            origIdx++;
+          }
+          const range = window.document.createRange();
+          range.setStart(node as Text, origIdx);
+          range.setEnd(node as Text, origIdx + quote.length);
+          nodesToReplace.push({ node: node as Text, range });
         }
       }
     }
 
     if (nodesToReplace.length > 0) {
-      const mark = document.createElement('mark');
+      const mark = window.document.createElement('mark');
       mark.className = "bg-primary/30 animate-pulse rounded-sm current-highlight";
-      
-      // Use the first found node for highlighting
       const { range } = nodesToReplace[0];
       try {
         range.surroundContents(mark);
         mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Remove the highlight after a delay
         setTimeout(() => {
             if (mark.parentNode) {
                 mark.outerHTML = mark.innerHTML;
             }
         }, 3000);
-
       } catch (e) {
         console.error("Failed to surround contents for highlighting", e);
       }
     }
-
   }, [viewerContent, isDocx, htmlContent]);
   
   const highlightedContent = useMemo(() => {
@@ -134,11 +138,15 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
       <div ref={viewerContainerRef} className="flex-1 bg-muted/20 overflow-y-auto transition-all duration-300">
         {document ? (
             isPdf ? (
-              <embed
-                src={document.content}
-                type="application/pdf"
-                className="w-full h-full"
-              />
+              document.content ? (
+                <embed
+                  src={document.content}
+                  type="application/pdf"
+                  className="w-full h-full"
+                />
+              ) : (
+                <div className="p-8 text-center text-destructive">PDF file is too large or could not be loaded.</div>
+              )
             ) : isDocx ? (
               <div
                 className="p-8 prose dark:prose-invert max-w-none"
