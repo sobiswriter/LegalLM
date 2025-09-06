@@ -28,7 +28,13 @@ const IdentifyRisksAndClausesOutputSchema = z.object({
 export type IdentifyRisksAndClausesOutput = z.infer<typeof IdentifyRisksAndClausesOutputSchema>;
 
 export async function identifyRisksAndClauses(input: IdentifyRisksAndClausesInput): Promise<IdentifyRisksAndClausesOutput> {
-  return identifyRisksAndClausesFlow(input);
+  try {
+    return await identifyRisksAndClausesFlow(input);
+  } catch (err: any) {
+    return {
+      analysis: `<h3>Risk & Clause Analysis</h3><p class='text-destructive'>${err?.message || 'Could not extract usable text from this document. Please upload a text-based file.'}</p>`
+    };
+  }
 }
 
 const prompt = ai.definePrompt({

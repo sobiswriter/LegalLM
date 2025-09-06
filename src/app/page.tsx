@@ -41,6 +41,14 @@ const getHtmlContent = async (file: File): Promise<string | undefined> => {
 
 export default function LegalLMPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
+  // Delete document handler
+  const handleDeleteDocument = (docId: number) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== docId));
+    if (selectedDocument?.id === docId) {
+      setSelectedDocument(null);
+      setMessages([]);
+    }
+  };
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   
@@ -216,6 +224,7 @@ export default function LegalLMPage() {
           selectedDocument={selectedDocument}
           onAddDocument={handleAddDocumentClick}
           onSelectDocument={handleSelectDocument}
+          onDeleteDocument={handleDeleteDocument}
           isUploading={isLoading && loadingAction === 'summary'}
           highlightedDocId={highlightedDocId}
           canUpload={!isLoading}

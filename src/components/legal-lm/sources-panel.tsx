@@ -12,12 +12,13 @@ interface SourcesPanelProps {
   selectedDocument: Document | null;
   onAddDocument: () => void;
   onSelectDocument: (doc: Document) => void;
+  onDeleteDocument: (docId: number) => void;
   isUploading: boolean;
   canUpload: boolean;
   highlightedDocId?: number | null;
 }
 
-export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSelectDocument, isUploading, canUpload, highlightedDocId }: SourcesPanelProps) {
+export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSelectDocument, onDeleteDocument, isUploading, canUpload, highlightedDocId }: SourcesPanelProps) {
   return (
     <aside className="w-[380px] flex-shrink-0 bg-card border-r flex flex-col">
       <div className="p-4 border-b">
@@ -43,19 +44,27 @@ export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSel
               {documents.map(doc => {
                 const isHighlighted = highlightedDocId === doc.id;
                 return (
+                  <div key={doc.id} className="flex items-center gap-2 group">
                     <button
-                    key={doc.id}
-                    onClick={() => onSelectDocument(doc)}
-                    className={cn(
+                      onClick={() => onSelectDocument(doc)}
+                      className={cn(
                         "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3",
                         "hover:bg-accent hover:border-primary/20",
                         selectedDocument?.id === doc.id ? 'bg-accent border-primary/50 shadow-sm' : 'bg-card',
                         isHighlighted && "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                    )}
+                      )}
                     >
-                    <FileText className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="truncate text-sm font-medium text-card-foreground">{doc.name}</span>
+                      <FileText className="w-5 h-5 text-primary flex-shrink-0" />
+                      <span className="truncate text-sm font-medium text-card-foreground">{doc.name}</span>
                     </button>
+                    <button
+                      onClick={() => onDeleteDocument(doc.id)}
+                      className="ml-1 text-xs text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete document"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 );
               })}
               {documents.length === 0 && !isUploading && (
