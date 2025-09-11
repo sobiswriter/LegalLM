@@ -30,19 +30,39 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
   const htmlContent = document?.htmlContent;
 
   useEffect(() => {
-    if (document && !isPdf && !isDocx) {
+    if (!document || isPdf) {
+      setTextContent('');
+      return;
+    }
+
+    // TXT-like files: decode the data URI
+    if (!isDocx) {
       const base64 = document.content.substring(document.content.indexOf(',') + 1);
       try {
         const decoded = atob(base64);
         setTextContent(decoded);
       } catch (e) {
-        console.error("Failed to decode text content", e);
-        setTextContent("Error: Could not display file content.");
+        console.error('Failed to decode text content', e);
+        setTextContent('Error: Could not display file content.');
       }
-    } else {
-        setTextContent('');
+      return;
     }
-  }, [document, isPdf, isDocx]);
+
+    // DOCX: htmlContent is provided; extract plain text so highlighting behaves like TXT
+    if (isDocx) {
+      try {
+        const temp = window.document.createElement('div');
+        temp.innerHTML = htmlContent || '';
+        // Use innerText to preserve visible line breaks
+        const txt = temp.innerText || temp.textContent || '';
+        setTextContent(txt);
+      } catch (e) {
+        console.error('Failed to extract text from docx htmlContent', e);
+        setTextContent('Error: Could not display document content.');
+      }
+      return;
+    }
+  }, [document, isPdf, isDocx, htmlContent]);
 
 
   useEffect(() => {
@@ -72,7 +92,7 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
     const normalize = (str: string) => str.replace(/\s+/g, ' ').trim().toLowerCase();
     const normQuote = normalize(quote);
 
-    // For docx (HTML content) and txt (preformatted text)
+  // For docx (rendered as plain text) and txt (preformatted text)
     const walker = window.document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
     let node: Node | null;
     const nodesToReplace: {node: Text, range: Range}[] = [];
@@ -82,15 +102,39 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
         const normNode = normalize(node.nodeValue);
         const matchIndex = normNode.indexOf(normQuote);
         if (matchIndex !== -1) {
-          // Find the real index in the original string
-          let origIdx = 0, normIdx = 0;
-          while (origIdx < node.nodeValue.length && normIdx < matchIndex) {
-            if (!/\s/.test(node.nodeValue[origIdx])) normIdx++;
+          // Map the normalized match index back to the original node offsets.
+          // We must account for collapsed whitespace when normalizing so
+          // the end offset is computed against the original string length
+          // and never exceeds it.
+          const nodeValue = node.nodeValue || '';
+          let origIdx = 0;
+          let normIdx = 0;
+
+          // Advance origIdx until we reach the normalized match start
+          while (origIdx < nodeValue.length && normIdx < matchIndex) {
+            if (!/\s/.test(nodeValue[origIdx])) normIdx++;
             origIdx++;
           }
+
+          // Compute how many normalized characters the quote occupies
+          const normQuoteLen = normQuote.length;
+          const targetNormEnd = matchIndex + normQuoteLen;
+
+          // Advance endOrigIdx until we've consumed the normalized quote length
+          let endOrigIdx = origIdx;
+          let normIdx2 = matchIndex;
+          while (endOrigIdx < nodeValue.length && normIdx2 < targetNormEnd) {
+            if (!/\s/.test(nodeValue[endOrigIdx])) normIdx2++;
+            endOrigIdx++;
+          }
+
+          // Clamp offsets to the node length to avoid Range errors
+          origIdx = Math.min(Math.max(0, origIdx), nodeValue.length);
+          endOrigIdx = Math.min(Math.max(origIdx, endOrigIdx), nodeValue.length);
+
           const range = window.document.createRange();
           range.setStart(node as Text, origIdx);
-          range.setEnd(node as Text, origIdx + quote.length);
+          range.setEnd(node as Text, endOrigIdx);
           nodesToReplace.push({ node: node as Text, range });
         }
       }
@@ -112,7 +156,7 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
         console.error("Failed to surround contents for highlighting", e);
       }
     }
-  }, [viewerContent, isDocx, htmlContent]);
+  }, [viewerContent, isDocx, textContent]);
   
   const highlightedContent = useMemo(() => {
     if (!document || isPdf || isDocx) {
@@ -148,10 +192,10 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
                 <div className="p-8 text-center text-destructive">PDF file is too large or could not be loaded.</div>
               )
             ) : isDocx ? (
-              <div
-                className="p-8 prose dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: htmlContent || '<p>Converting document...</p>' }}
-              />
+              // Render DOCX as plain text inside a pre so highlighting logic is the same as TXT
+              <div className="p-8 max-w-none">
+                <pre className="p-0 m-0 text-sm whitespace-pre-wrap font-sans">{textContent || 'Converting document...'}</pre>
+              </div>
             ) : (
               <div>{highlightedContent}</div>
             )

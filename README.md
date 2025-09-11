@@ -70,3 +70,18 @@ Follow these instructions to get a local copy of LegalLM up and running.
     The application will be available at `http://localhost:9002`.
 
 You should now have a fully functional local instance of LegalLM running!
+
+## Deploying to Vercel (recommended)
+
+Vercel provides first-class support for Next.js, automatic builds from GitHub, and an easy environment variable UI.
+
+1. Rotate any leaked API keys (if you committed `.env` previously).
+2. Remove the tracked `.env` locally and make sure it's ignored by git (the repo already ignores `.env`).
+3. Create a Vercel account and import this GitHub repository.
+4. In the Vercel project settings, add an Environment Variable named `GEMINI_API_KEY` with your Google AI key.
+5. Configure the build command (default `npm run build`) and let Vercel build and deploy the site.
+
+Notes:
+- If your app depends on a running Genkit server for AI flows, you'll need to host that service separately (Cloud Run, a small VM, or another server) and update any client/server endpoints to point to the hosted Genkit runtime. Vercel is suitable for the Next.js app itself.
+- Do not commit secrets to the repo. Use Vercel's environment variable settings or your CI secrets store.
+
