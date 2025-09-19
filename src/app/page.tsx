@@ -12,6 +12,7 @@ import { defineLegalTerm } from '@/ai/flows/define-legal-term';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import mammoth from 'mammoth';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 
 // Helper to get HTML content for docx files
@@ -56,6 +57,7 @@ export default function LegalLMPage() {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [highlightedDocId, setHighlightedDocId] = useState<number | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
 
   useEffect(() => {
@@ -134,6 +136,10 @@ export default function LegalLMPage() {
         setViewerContent({ quote: '', docId: selectedDocument.id });
     } else {
         setViewerContent({ quote, docId: selectedDocument.id });
+    }
+
+    if (isMobileView) {
+        setIsViewerOpen(true);
     }
 
     setHighlightedDocId(selectedDocument.id);
@@ -247,8 +253,7 @@ export default function LegalLMPage() {
               canUpload={!isLoading}
             />
           ) : (
-            <div className="flex flex-col w-full">
-              <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} onBack={handleBackToSources} isMobile={isMobileView} />
+            <>
               <AnalysisPanel
                   document={selectedDocument}
                   messages={messages}
@@ -259,8 +264,16 @@ export default function LegalLMPage() {
                   onDefineTerm={handleDefineTerm}
                   isLoading={isLoading}
                   loadingAction={loadingAction}
+                  onViewDocument={() => setIsViewerOpen(true)}
+                  onBackToSources={handleBackToSources}
+                  isMobile={isMobileView}
               />
-            </div>
+               <Sheet open={isViewerOpen} onOpenChange={setIsViewerOpen}>
+                    <SheetContent side="left" className="p-0 w-full h-full sm:max-w-full">
+                         <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} onBack={() => setIsViewerOpen(false)} isMobile={isMobileView} />
+                    </SheetContent>
+                </Sheet>
+            </>
           )
         ) : (
           <>

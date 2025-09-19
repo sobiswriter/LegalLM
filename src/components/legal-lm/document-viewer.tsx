@@ -195,17 +195,17 @@ export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile 
 
 
   return (
-    <section className="flex flex-col bg-background h-[50vh] lg:h-full">
+    <section className="flex flex-col bg-background h-screen lg:h-full">
       <div className="p-4 border-b shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-2 truncate">
-          {isMobile && onBack && (
+          {onBack && (
             <Button variant="ghost" size="icon" className="mr-2" onClick={onBack}>
               <ArrowLeft />
             </Button>
           )}
           <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Document Viewer'}</h2>
         </div>
-        {(isPdf || isDocx) && (
+        {(isPdf || isDocx) && !isMobile && (
             <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
                 <AlertCircle className="w-4 h-4" />
                 <span>Citation highlighting may not be precise for PDF/DOCX.</span>

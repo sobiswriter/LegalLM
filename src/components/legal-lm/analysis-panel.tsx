@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Feather, SendHorizonal, User, FileWarning, Search, FileText, Loader2 } from 'lucide-react';
+import { Feather, SendHorizonal, User, FileWarning, Search, FileText, Loader2, ArrowLeft, ExternalLink } from 'lucide-react';
 import type { Document, Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +22,11 @@ interface AnalysisPanelProps {
 
   isLoading: boolean;
   loadingAction: string | null;
+
+  // Mobile specific props
+  isMobile?: boolean;
+  onBackToSources?: () => void;
+  onViewDocument?: () => void;
 }
 
 const WelcomeView = () => (
@@ -169,7 +174,7 @@ const ActionToolbar = ({ onGenerateSummary, onRiskAnalysis, onDefineTerm, isLoad
 };
 
 
-const ChatView = ({ document, messages, onSendMessage, onCitationClick, onGenerateSummary, onRiskAnalysis, onDefineTerm, isLoading, loadingAction }: AnalysisPanelProps) => {
+const ChatView = ({ document, messages, onSendMessage, onCitationClick, onGenerateSummary, onRiskAnalysis, onDefineTerm, isLoading, loadingAction, isMobile, onBackToSources, onViewDocument }: AnalysisPanelProps) => {
     const [input, setInput] = useState('');
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -192,6 +197,24 @@ const ChatView = ({ document, messages, onSendMessage, onCitationClick, onGenera
 
     return (
         <div className="flex flex-col h-full">
+            {isMobile && (
+                 <div className="p-4 border-b shrink-0 flex items-center justify-between">
+                    <div className="flex items-center gap-2 truncate">
+                        {onBackToSources && (
+                            <Button variant="ghost" size="icon" className="mr-2" onClick={onBackToSources}>
+                            <ArrowLeft />
+                            </Button>
+                        )}
+                        <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Analysis'}</h2>
+                    </div>
+                     {onViewDocument && (
+                        <Button variant="outline" size="sm" onClick={onViewDocument}>
+                            <ExternalLink className="mr-2"/>
+                            View Document
+                        </Button>
+                    )}
+                </div>
+            )}
             <ScrollArea className="flex-1" ref={scrollAreaRef}>
                 <div className="p-6">
                     {messages.map(msg => (
