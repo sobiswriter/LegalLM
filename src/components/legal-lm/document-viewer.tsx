@@ -215,21 +215,33 @@ export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile 
       <div ref={viewerContainerRef} className="flex-1 bg-muted/20 overflow-y-auto transition-all duration-300">
         {document ? (
             isPdf ? (
-              <div className="p-8 flex flex-col items-center justify-center h-full">
-                {pdfUrl ? (
-                  <Button asChild size="lg">
-                    <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="mr-2"/>
-                      Open PDF in New Tab
-                    </a>
-                  </Button>
+              <>
+                {isMobile ? (
+                  <div className="p-8 flex flex-col items-center justify-center h-full">
+                    {pdfUrl ? (
+                      <Button asChild size="lg">
+                        <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-2"/>
+                          Open PDF in New Tab
+                        </a>
+                      </Button>
+                    ) : (
+                      <p className="text-destructive">Generating PDF link...</p>
+                    )}
+                    <p className="text-muted-foreground text-sm mt-4 text-center">
+                      PDF preview is not available directly on this screen.
+                    </p>
+                  </div>
                 ) : (
-                  <p className="text-destructive">Generating PDF link...</p>
+                   pdfUrl ? (
+                    <iframe src={pdfUrl} className="w-full h-full" title={document.name} />
+                  ) : (
+                    <div className="p-8 flex items-center justify-center h-full">
+                      <p>Loading PDF...</p>
+                    </div>
+                  )
                 )}
-                <p className="text-muted-foreground text-sm mt-4 text-center">
-                  PDF preview is not available directly on this screen.
-                </p>
-              </div>
+              </>
             ) : isDocx ? (
               // Render DOCX as plain text inside a pre so highlighting logic is the same as TXT
               <div className="p-8 max-w-none">
