@@ -1,3 +1,5 @@
+'use server';
+
 import PDFParser from 'pdf2json';
 import mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
