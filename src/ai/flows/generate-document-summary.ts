@@ -32,13 +32,13 @@ export async function generateDocumentSummary(input: GenerateDocumentSummaryInpu
     return await generateDocumentSummaryFlow(input);
   } catch (err: any) {
     return {
-      summary: `<h3>Summary of ${input.documentName}</h3><p class='text-destructive'>${err?.message || 'Could not extract usable text from this document. Please upload a text-based file.'}</p>`
+      summary: `<h3>Summary of ${input.documentName}</h3><p class='text-destructive'>${err?.message || 'Could not process this document.'}</p>`
     };
   }
 }
 
-const summaryPrompt = ai.definePrompt({
-  name: 'summaryPrompt',
+const summaryPromptForText = ai.definePrompt({
+  name: 'summaryPromptForText',
   input: {
     schema: z.object({
       documentName: z.string(),
@@ -62,6 +62,30 @@ For example, a correct citation looks like this: <p>The contract is valid until 
 A WRONG citation looks like this: <p>The contract is valid until June 1, 2024, "the contract is valid until June 1, 2024" [1].</p>`,
 });
 
+const summaryPromptForPdf = ai.definePrompt({
+  name: 'summaryPromptForPdf',
+  input: {
+    schema: z.object({
+      documentName: z.string(),
+      documentDataUri: z.string(),
+    }),
+  },
+  output: {schema: GenerateDocumentSummaryOutputSchema},
+  prompt: `You are a highly skilled legal assistant. Your task is to summarize the provided legal document.
+The user has uploaded a PDF document named {{{documentName}}}. 
+Here is the document: {{media url=documentDataUri}}
+
+Your output MUST start with an <h3> title tag, like this: "<h3>Summary of {{{documentName}}}</h3>".
+After the title, provide a concise summary of its key components (e.g., Parties, Term, Key Obligations, and Risks).
+Format the body of the summary as clean, semantic HTML using <p> tags.
+For every piece of information you provide, you MUST cite the relevant section by adding a superscript number.
+For each citation, you MUST add a 'data-quote' attribute to the superscript tag containing the exact text from the document being cited.
+Crucially, do NOT include the quoted text in the main body of the summary itself. Only the superscript number should be visible in the flow of the text.
+
+For example, a correct citation looks like this: <p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>
+A WRONG citation looks like this: <p>The contract is valid until June 1, 2024, "the contract is valid until June 1, 2024" [1].</p>`,
+});
+
 
 const generateDocumentSummaryFlow = ai.defineFlow(
   {
@@ -71,13 +95,19 @@ const generateDocumentSummaryFlow = ai.defineFlow(
   },
   async ({documentDataUri, documentName}) => {
     
-    const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
-
-    const {output} = await summaryPrompt({
-      documentName,
-      documentContent: extractedText,
-    });
-
-    return output!;
+    if (documentName.toLowerCase().endsWith('.pdf')) {
+      const {output} = await summaryPromptForPdf({
+        documentName,
+        documentDataUri,
+      });
+      return output!;
+    } else {
+      const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
+      const {output} = await summaryPromptForText({
+        documentName,
+        documentContent: extractedText,
+      });
+      return output!;
+    }
   }
 );
