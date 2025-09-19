@@ -12,7 +12,7 @@ import { defineLegalTerm } from '@/ai/flows/define-legal-term';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import mammoth from 'mammoth';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 
 // Helper to get HTML content for docx files
@@ -270,7 +270,10 @@ export default function LegalLMPage() {
               />
                <Sheet open={isViewerOpen} onOpenChange={setIsViewerOpen}>
                     <SheetContent side="left" className="p-0 w-full h-full sm:max-w-full">
-                         <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} onBack={() => setIsViewerOpen(false)} isMobile={isMobileView} />
+                        <SheetHeader className="sr-only">
+                            <SheetTitle>Document Viewer</SheetTitle>
+                        </SheetHeader>
+                        <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} onBack={() => setIsViewerOpen(false)} isMobile={isMobileView} />
                     </SheetContent>
                 </Sheet>
             </>
