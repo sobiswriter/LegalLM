@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Document, Message } from '@/lib/types';
 import { SourcesPanel } from '@/components/legal-lm/sources-panel';
 import { AnalysisPanel } from '@/components/legal-lm/analysis-panel';
@@ -55,6 +55,17 @@ export default function LegalLMPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [highlightedDocId, setHighlightedDocId] = useState<number | null>(null);
+  const [isMobileView, setIsMobileView] = useState(false);
+
+
+  useEffect(() => {
+    const checkSize = () => {
+      setIsMobileView(window.innerWidth < 1024);
+    };
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
+  }, []);
 
   const [viewerContent, setViewerContent] = useState<{ quote: string; docId: number } | null>(null);
 
@@ -109,6 +120,10 @@ export default function LegalLMPage() {
     if (selectedDocument?.id === doc.id) return;
     setSelectedDocument(doc);
     handleGenerateSummary(doc, true);
+  };
+
+  const handleBackToSources = () => {
+    setSelectedDocument(null);
   };
 
   const handleCitationClick = (quote: string) => {
@@ -219,34 +234,66 @@ export default function LegalLMPage() {
   return (
     <>
       <div className="flex h-screen w-full bg-background overflow-hidden">
-        <SourcesPanel
-          documents={documents}
-          selectedDocument={selectedDocument}
-          onAddDocument={handleAddDocumentClick}
-          onSelectDocument={handleSelectDocument}
-          onDeleteDocument={handleDeleteDocument}
-          isUploading={isLoading && loadingAction === 'summary'}
-          highlightedDocId={highlightedDocId}
-          canUpload={!isLoading}
-        />
-        <Separator orientation="vertical" />
-        <div className="flex-1 min-w-0 max-w-[calc(100vw-960px)]">
-          <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} />
-        </div>
-        <Separator orientation="vertical" />
-        <div className="w-[580px] flex-shrink-0">
-          <AnalysisPanel
-            document={selectedDocument}
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            onCitationClick={handleCitationClick}
-            onGenerateSummary={() => handleGenerateSummary(selectedDocument, true)}
-            onRiskAnalysis={handleRiskAnalysis}
-            onDefineTerm={handleDefineTerm}
-            isLoading={isLoading}
-            loadingAction={loadingAction}
-          />
-        </div>
+        {isMobileView ? (
+          !selectedDocument ? (
+             <SourcesPanel
+              documents={documents}
+              selectedDocument={selectedDocument}
+              onAddDocument={handleAddDocumentClick}
+              onSelectDocument={handleSelectDocument}
+              onDeleteDocument={handleDeleteDocument}
+              isUploading={isLoading && loadingAction === 'summary'}
+              highlightedDocId={highlightedDocId}
+              canUpload={!isLoading}
+            />
+          ) : (
+            <div className="flex flex-col w-full">
+              <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} onBack={handleBackToSources} isMobile={isMobileView} />
+              <AnalysisPanel
+                  document={selectedDocument}
+                  messages={messages}
+                  onSendMessage={handleSendMessage}
+                  onCitationClick={handleCitationClick}
+                  onGenerateSummary={() => handleGenerateSummary(selectedDocument, true)}
+                  onRiskAnalysis={handleRiskAnalysis}
+                  onDefineTerm={handleDefineTerm}
+                  isLoading={isLoading}
+                  loadingAction={loadingAction}
+              />
+            </div>
+          )
+        ) : (
+          <>
+            <SourcesPanel
+              documents={documents}
+              selectedDocument={selectedDocument}
+              onAddDocument={handleAddDocumentClick}
+              onSelectDocument={handleSelectDocument}
+              onDeleteDocument={handleDeleteDocument}
+              isUploading={isLoading && loadingAction === 'summary'}
+              highlightedDocId={highlightedDocId}
+              canUpload={!isLoading}
+            />
+            <Separator orientation="vertical" />
+            <div className="flex-1 min-w-0 max-w-[calc(100vw-960px)]">
+              <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} />
+            </div>
+            <Separator orientation="vertical" />
+            <div className="w-[580px] flex-shrink-0">
+              <AnalysisPanel
+                document={selectedDocument}
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                onCitationClick={handleCitationClick}
+                onGenerateSummary={() => handleGenerateSummary(selectedDocument, true)}
+                onRiskAnalysis={handleRiskAnalysis}
+                onDefineTerm={handleDefineTerm}
+                isLoading={isLoading}
+                loadingAction={loadingAction}
+              />
+            </div>
+          </>
+        )}
       </div>
        <input
         type="file"

@@ -3,11 +3,14 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import type { Document } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface DocumentViewerPanelProps {
   document: Document | null;
   viewerContent?: { quote: string; docId: number } | null;
+  onBack?: () => void;
+  isMobile?: boolean;
 }
 
 const WelcomeView = () => (
@@ -21,7 +24,7 @@ const escapeRegExp = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
-export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerPanelProps) {
+export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile }: DocumentViewerPanelProps) {
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [textContent, setTextContent] = useState<string>('');
   
@@ -169,11 +172,18 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
 
 
   return (
-    <section className="flex flex-col bg-background h-screen">
+    <section className="flex flex-col bg-background h-screen lg:h-full">
       <div className="p-4 border-b shrink-0 flex items-center justify-between">
-        <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Document Viewer'}</h2>
+        <div className="flex items-center gap-2 truncate">
+          {isMobile && onBack && (
+            <Button variant="ghost" size="icon" className="mr-2" onClick={onBack}>
+              <ArrowLeft />
+            </Button>
+          )}
+          <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Document Viewer'}</h2>
+        </div>
         {(isPdf || isDocx) && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
                 <AlertCircle className="w-4 h-4" />
                 <span>Citation highlighting may not be precise for PDF/DOCX.</span>
             </div>

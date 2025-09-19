@@ -20,7 +20,7 @@ interface SourcesPanelProps {
 
 export function SourcesPanel({ documents, selectedDocument, onAddDocument, onSelectDocument, onDeleteDocument, isUploading, canUpload, highlightedDocId }: SourcesPanelProps) {
   return (
-    <aside className="w-[380px] flex-shrink-0 bg-card border-r flex flex-col">
+    <aside className="w-full lg:w-[380px] flex-shrink-0 bg-card border-r flex flex-col">
       <div className="p-4 border-b">
         <div className="flex items-center gap-2">
             <Feather className="w-6 h-6 text-primary"/>

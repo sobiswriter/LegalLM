@@ -231,7 +231,7 @@ const ChatView = ({ document, messages, onSendMessage, onCitationClick, onGenera
 
 export function AnalysisPanel(props: AnalysisPanelProps) {
   return (
-    <main className="flex flex-col bg-card border-l h-screen w-full overflow-hidden">
+    <main className="flex flex-col bg-card border-l h-screen w-full lg:w-auto lg:h-full overflow-hidden">
       {!props.document ? (
         <WelcomeView />
       ) : (
