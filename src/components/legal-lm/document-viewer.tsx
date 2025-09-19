@@ -27,6 +27,7 @@ const escapeRegExp = (string: string) => {
 export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile }: DocumentViewerPanelProps) {
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [textContent, setTextContent] = useState<string>('');
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   
   const isPdf = document?.name.endsWith('.pdf') ?? false;
   const isDocx = document?.name.endsWith('.docx') ?? false;
@@ -66,6 +67,28 @@ export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile 
       return;
     }
   }, [document, isPdf, isDocx, htmlContent]);
+
+
+    useEffect(() => {
+    if (document && isPdf && document.content) {
+      const byteCharacters = atob(document.content.split(',')[1]);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
+
+      return () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+        setPdfUrl(null);
+      };
+    }
+  }, [document, isPdf]);
 
 
   useEffect(() => {
@@ -192,14 +215,14 @@ export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile 
       <div ref={viewerContainerRef} className="flex-1 bg-muted/20 overflow-y-auto transition-all duration-300">
         {document ? (
             isPdf ? (
-              document.content ? (
+              pdfUrl ? (
                 <iframe
-                  src={document.content}
+                  src={pdfUrl}
                   title={document.name}
                   className="w-full h-full border-none"
                 />
               ) : (
-                <div className="p-8 text-center text-destructive">PDF file is too large or could not be loaded.</div>
+                <div className="p-8 text-center text-destructive">Loading PDF preview...</div>
               )
             ) : isDocx ? (
               // Render DOCX as plain text inside a pre so highlighting logic is the same as TXT
