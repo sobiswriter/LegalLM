@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import type { Document } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface DocumentViewerPanelProps {
@@ -215,15 +215,21 @@ export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile 
       <div ref={viewerContainerRef} className="flex-1 bg-muted/20 overflow-y-auto transition-all duration-300">
         {document ? (
             isPdf ? (
-              pdfUrl ? (
-                <iframe
-                  src={pdfUrl}
-                  title={document.name}
-                  className="w-full h-full border-none"
-                />
-              ) : (
-                <div className="p-8 text-center text-destructive">Loading PDF preview...</div>
-              )
+              <div className="p-8 flex flex-col items-center justify-center h-full">
+                {pdfUrl ? (
+                  <Button asChild size="lg">
+                    <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2"/>
+                      Open PDF in New Tab
+                    </a>
+                  </Button>
+                ) : (
+                  <p className="text-destructive">Generating PDF link...</p>
+                )}
+                <p className="text-muted-foreground text-sm mt-4 text-center">
+                  PDF preview is not available directly on this screen.
+                </p>
+              </div>
             ) : isDocx ? (
               // Render DOCX as plain text inside a pre so highlighting logic is the same as TXT
               <div className="p-8 max-w-none">
