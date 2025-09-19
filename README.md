@@ -23,7 +23,7 @@ LegalLM is built with a modern, type-safe, and performant technology stack:
 - **AI & GenAI**: [Genkit](https://firebase.google.com/docs/genkit) (powered by Google's Gemini family of models)
 - **UI Components**: [React](https://react.dev/), [ShadCN UI](https://ui.shadcn.com/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **File Parsing**: [pdf2json](https://www.npmjs.com/package/pdf2json), [Mammoth](https://www.npmjs.com/package/mammoth) for `.docx` files.
+- **File Parsing**: For `.pdf` files, the application leverages the native multimodal capabilities of the Gemini model, sending the file directly for analysis. For `.docx` files, it uses [Mammoth](https://www.npmjs.com/package/mammoth).
 - **Deployment**: Ready for [Firebase App Hosting](https://firebase.google.com/docs/app-hosting).
 
 ## Getting Started
@@ -39,8 +39,8 @@ Follow these instructions to get a local copy of LegalLM up and running.
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repository-url>
-    cd <repository-folder>
+    git clone https://github.com/sobiswriter/LegalLM.git
+    cd LegalLM
     ```
 
 2.  **Install dependencies:**
@@ -84,4 +84,3 @@ Vercel provides first-class support for Next.js, automatic builds from GitHub, a
 Notes:
 - If your app depends on a running Genkit server for AI flows, you'll need to host that service separately (Cloud Run, a small VM, or another server) and update any client/server endpoints to point to the hosted Genkit runtime. Vercel is suitable for the Next.js app itself.
 - Do not commit secrets to the repo. Use Vercel's environment variable settings or your CI secrets store.
-
