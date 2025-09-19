@@ -172,7 +172,7 @@ export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile 
 
 
   return (
-    <section className="flex flex-col bg-background h-screen lg:h-full">
+    <section className="flex flex-col bg-background h-[50vh] lg:h-full">
       <div className="p-4 border-b shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-2 truncate">
           {isMobile && onBack && (
@@ -193,10 +193,10 @@ export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile 
         {document ? (
             isPdf ? (
               document.content ? (
-                <embed
+                <iframe
                   src={document.content}
-                  type="application/pdf"
-                  className="w-full h-full"
+                  title={document.name}
+                  className="w-full h-full border-none"
                 />
               ) : (
                 <div className="p-8 text-center text-destructive">PDF file is too large or could not be loaded.</div>
