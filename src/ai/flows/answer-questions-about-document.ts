@@ -32,16 +32,32 @@ export async function answerQuestionsAboutDocument(input: AnswerQuestionsAboutDo
     return await answerQuestionsAboutDocumentFlow(input);
   } catch (err: any) {
     return {
-      answer: `<p class='text-destructive'>${err?.message || 'Could not extract usable text from this document. Please upload a text-based file.'}</p>`
+      answer: `<p class='text-destructive'>${err?.message || 'Could not process this document.'}</p>`
     };
   }
 }
 
-const prompt = ai.definePrompt({
-  name: 'answerQuestionsAboutDocumentPrompt',
+const promptForText = ai.definePrompt({
+  name: 'answerQuestionsAboutDocumentPromptForText',
   input: {schema: z.object({
     question: z.string(),
     documentContent: z.string(),
+  })},
+  output: {schema: AnswerQuestionsAboutDocumentOutputSchema},
+  prompt: `You are a legal expert. You will answer questions based ONLY on the provided legal document content.
+  Format your output as clean, semantic HTML using <p> tags.
+  When you answer, you MUST cite the specific parts of the document that support your answer. 
+  For each citation, add a data-quote attribute to the sup tag containing the exact text from the document being cited. For example: "<p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>"
+
+  Question: {{{question}}}
+  Document Content: {{{documentContent}}}`,
+});
+
+const promptForPdf = ai.definePrompt({
+  name: 'answerQuestionsAboutDocumentPromptForPdf',
+  input: {schema: z.object({
+    question: z.string(),
+    documentDataUri: z.string(),
   })},
   output: {schema: AnswerQuestionsAboutDocumentOutputSchema},
   prompt: `You are a legal expert. You will answer questions based ONLY on the provided legal document.
@@ -50,7 +66,7 @@ const prompt = ai.definePrompt({
   For each citation, add a data-quote attribute to the sup tag containing the exact text from the document being cited. For example: "<p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>"
 
   Question: {{{question}}}
-  Document: {{{documentContent}}}`,
+  Document: {{media url=documentDataUri}}`,
 });
 
 const answerQuestionsAboutDocumentFlow = ai.defineFlow(
@@ -60,11 +76,19 @@ const answerQuestionsAboutDocumentFlow = ai.defineFlow(
     outputSchema: AnswerQuestionsAboutDocumentOutputSchema,
   },
   async ({ question, documentDataUri, documentName }) => {
-    const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
-    const {output} = await prompt({
-        question,
-        documentContent: extractedText,
-    });
-    return output!;
+    if (documentName.toLowerCase().endsWith('.pdf')) {
+      const {output} = await promptForPdf({
+          question,
+          documentDataUri,
+      });
+      return output!;
+    } else {
+      const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
+      const {output} = await promptForText({
+          question,
+          documentContent: extractedText,
+      });
+      return output!;
+    }
   }
 );

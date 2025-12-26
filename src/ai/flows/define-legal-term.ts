@@ -32,11 +32,31 @@ export async function defineLegalTerm(input: DefineLegalTermInput): Promise<Defi
   return defineLegalTermFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'defineLegalTermPrompt',
+const promptForText = ai.definePrompt({
+  name: 'defineLegalTermPromptForText',
   input: {schema: z.object({
     term: z.string(),
     documentContent: z.string(),
+  })},
+  output: {schema: DefineLegalTermOutputSchema},
+  prompt: `You are a legal dictionary. The user wants to understand a specific term from a legal document.
+  
+  Term: "{{{term}}}"
+  
+  First, provide a general definition of the term.
+  Then, analyze the provided document content to see if the term is used or defined specifically within it. If it is, explain how it's used and cite the relevant section.
+  For each citation, add a data-quote attribute to the sup tag containing the exact text from the document being cited. For example: "<p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>"
+
+  Format your output as clean, semantic HTML.
+  
+  Document content for context: {{{documentContent}}}`,
+});
+
+const promptForPdf = ai.definePrompt({
+  name: 'defineLegalTermPromptForPdf',
+  input: {schema: z.object({
+    term: z.string(),
+    documentDataUri: z.string(),
   })},
   output: {schema: DefineLegalTermOutputSchema},
   prompt: `You are a legal dictionary. The user wants to understand a specific term from a legal document.
@@ -49,7 +69,7 @@ const prompt = ai.definePrompt({
 
   Format your output as clean, semantic HTML.
   
-  Document for context: {{{documentContent}}}`,
+  Document for context: {{media url=documentDataUri}}`,
 });
 
 const defineLegalTermFlow = ai.defineFlow(
@@ -59,11 +79,19 @@ const defineLegalTermFlow = ai.defineFlow(
     outputSchema: DefineLegalTermOutputSchema,
   },
   async ({term, documentDataUri, documentName}) => {
-    const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
-    const {output} = await prompt({
-        term,
-        documentContent: extractedText,
-    });
-    return output!;
+    if (documentName.toLowerCase().endsWith('.pdf')) {
+      const {output} = await promptForPdf({
+          term,
+          documentDataUri,
+      });
+      return output!;
+    } else {
+      const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
+      const {output} = await promptForText({
+          term,
+          documentContent: extractedText,
+      });
+      return output!;
+    }
   }
 );

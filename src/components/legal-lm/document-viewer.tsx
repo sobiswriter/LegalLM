@@ -3,11 +3,14 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import type { Document } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface DocumentViewerPanelProps {
   document: Document | null;
   viewerContent?: { quote: string; docId: number } | null;
+  onBack?: () => void;
+  isMobile?: boolean;
 }
 
 const WelcomeView = () => (
@@ -21,9 +24,10 @@ const escapeRegExp = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
-export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerPanelProps) {
+export function DocumentViewerPanel({ document, viewerContent, onBack, isMobile }: DocumentViewerPanelProps) {
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [textContent, setTextContent] = useState<string>('');
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   
   const isPdf = document?.name.endsWith('.pdf') ?? false;
   const isDocx = document?.name.endsWith('.docx') ?? false;
@@ -63,6 +67,28 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
       return;
     }
   }, [document, isPdf, isDocx, htmlContent]);
+
+
+    useEffect(() => {
+    if (document && isPdf && document.content) {
+      const byteCharacters = atob(document.content.split(',')[1]);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
+
+      return () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+        setPdfUrl(null);
+      };
+    }
+  }, [document, isPdf]);
 
 
   useEffect(() => {
@@ -169,11 +195,18 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
 
 
   return (
-    <section className="flex flex-col bg-background h-screen">
+    <section className="flex flex-col bg-background h-screen lg:h-full">
       <div className="p-4 border-b shrink-0 flex items-center justify-between">
-        <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Document Viewer'}</h2>
-        {(isPdf || isDocx) && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 truncate">
+          {onBack && (
+            <Button variant="ghost" size="icon" className="mr-2" onClick={onBack}>
+              <ArrowLeft />
+            </Button>
+          )}
+          <h2 className="text-lg font-semibold truncate">{document?.name ?? 'Document Viewer'}</h2>
+        </div>
+        {(isPdf || isDocx) && !isMobile && (
+            <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
                 <AlertCircle className="w-4 h-4" />
                 <span>Citation highlighting may not be precise for PDF/DOCX.</span>
             </div>
@@ -182,15 +215,33 @@ export function DocumentViewerPanel({ document, viewerContent }: DocumentViewerP
       <div ref={viewerContainerRef} className="flex-1 bg-muted/20 overflow-y-auto transition-all duration-300">
         {document ? (
             isPdf ? (
-              document.content ? (
-                <embed
-                  src={document.content}
-                  type="application/pdf"
-                  className="w-full h-full"
-                />
-              ) : (
-                <div className="p-8 text-center text-destructive">PDF file is too large or could not be loaded.</div>
-              )
+              <>
+                {isMobile ? (
+                  <div className="p-8 flex flex-col items-center justify-center h-full">
+                    {pdfUrl ? (
+                      <Button asChild size="lg">
+                        <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-2"/>
+                          Open PDF in New Tab
+                        </a>
+                      </Button>
+                    ) : (
+                      <p className="text-destructive">Generating PDF link...</p>
+                    )}
+                    <p className="text-muted-foreground text-sm mt-4 text-center">
+                      PDF preview is not available directly on this screen.
+                    </p>
+                  </div>
+                ) : (
+                   pdfUrl ? (
+                    <iframe src={pdfUrl} className="w-full h-full" title={document.name} />
+                  ) : (
+                    <div className="p-8 flex items-center justify-center h-full">
+                      <p>Loading PDF...</p>
+                    </div>
+                  )
+                )}
+              </>
             ) : isDocx ? (
               // Render DOCX as plain text inside a pre so highlighting logic is the same as TXT
               <div className="p-8 max-w-none">

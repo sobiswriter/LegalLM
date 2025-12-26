@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Document, Message } from '@/lib/types';
 import { SourcesPanel } from '@/components/legal-lm/sources-panel';
 import { AnalysisPanel } from '@/components/legal-lm/analysis-panel';
@@ -12,6 +12,7 @@ import { defineLegalTerm } from '@/ai/flows/define-legal-term';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import mammoth from 'mammoth';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 
 // Helper to get HTML content for docx files
@@ -55,6 +56,18 @@ export default function LegalLMPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [highlightedDocId, setHighlightedDocId] = useState<number | null>(null);
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+
+
+  useEffect(() => {
+    const checkSize = () => {
+      setIsMobileView(window.innerWidth < 1024);
+    };
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
+  }, []);
 
   const [viewerContent, setViewerContent] = useState<{ quote: string; docId: number } | null>(null);
 
@@ -111,6 +124,10 @@ export default function LegalLMPage() {
     handleGenerateSummary(doc, true);
   };
 
+  const handleBackToSources = () => {
+    setSelectedDocument(null);
+  };
+
   const handleCitationClick = (quote: string) => {
     if (!selectedDocument) return;
     
@@ -119,6 +136,10 @@ export default function LegalLMPage() {
         setViewerContent({ quote: '', docId: selectedDocument.id });
     } else {
         setViewerContent({ quote, docId: selectedDocument.id });
+    }
+
+    if (isMobileView) {
+        setIsViewerOpen(true);
     }
 
     setHighlightedDocId(selectedDocument.id);
@@ -219,34 +240,76 @@ export default function LegalLMPage() {
   return (
     <>
       <div className="flex h-screen w-full bg-background overflow-hidden">
-        <SourcesPanel
-          documents={documents}
-          selectedDocument={selectedDocument}
-          onAddDocument={handleAddDocumentClick}
-          onSelectDocument={handleSelectDocument}
-          onDeleteDocument={handleDeleteDocument}
-          isUploading={isLoading && loadingAction === 'summary'}
-          highlightedDocId={highlightedDocId}
-          canUpload={!isLoading}
-        />
-        <Separator orientation="vertical" />
-        <div className="flex-1 min-w-0 max-w-[calc(100vw-960px)]">
-          <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} />
-        </div>
-        <Separator orientation="vertical" />
-        <div className="w-[580px] flex-shrink-0">
-          <AnalysisPanel
-            document={selectedDocument}
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            onCitationClick={handleCitationClick}
-            onGenerateSummary={() => handleGenerateSummary(selectedDocument, true)}
-            onRiskAnalysis={handleRiskAnalysis}
-            onDefineTerm={handleDefineTerm}
-            isLoading={isLoading}
-            loadingAction={loadingAction}
-          />
-        </div>
+        {isMobileView ? (
+          !selectedDocument ? (
+             <SourcesPanel
+              documents={documents}
+              selectedDocument={selectedDocument}
+              onAddDocument={handleAddDocumentClick}
+              onSelectDocument={handleSelectDocument}
+              onDeleteDocument={handleDeleteDocument}
+              isUploading={isLoading && loadingAction === 'summary'}
+              highlightedDocId={highlightedDocId}
+              canUpload={!isLoading}
+            />
+          ) : (
+            <>
+              <AnalysisPanel
+                  document={selectedDocument}
+                  messages={messages}
+                  onSendMessage={handleSendMessage}
+                  onCitationClick={handleCitationClick}
+                  onGenerateSummary={() => handleGenerateSummary(selectedDocument, true)}
+                  onRiskAnalysis={handleRiskAnalysis}
+                  onDefineTerm={handleDefineTerm}
+                  isLoading={isLoading}
+                  loadingAction={loadingAction}
+                  onViewDocument={() => setIsViewerOpen(true)}
+                  onBackToSources={handleBackToSources}
+                  isMobile={isMobileView}
+              />
+               <Sheet open={isViewerOpen} onOpenChange={setIsViewerOpen}>
+                    <SheetContent side="left" className="p-0 w-full h-full sm:max-w-full">
+                        <SheetHeader className="sr-only">
+                            <SheetTitle>Document Viewer</SheetTitle>
+                        </SheetHeader>
+                        <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} onBack={() => setIsViewerOpen(false)} isMobile={isMobileView} />
+                    </SheetContent>
+                </Sheet>
+            </>
+          )
+        ) : (
+          <>
+            <SourcesPanel
+              documents={documents}
+              selectedDocument={selectedDocument}
+              onAddDocument={handleAddDocumentClick}
+              onSelectDocument={handleSelectDocument}
+              onDeleteDocument={handleDeleteDocument}
+              isUploading={isLoading && loadingAction === 'summary'}
+              highlightedDocId={highlightedDocId}
+              canUpload={!isLoading}
+            />
+            <Separator orientation="vertical" />
+            <div className="flex-1 min-w-0 max-w-[calc(100vw-960px)]">
+              <DocumentViewerPanel document={selectedDocument} viewerContent={viewerContent} />
+            </div>
+            <Separator orientation="vertical" />
+            <div className="w-[580px] flex-shrink-0">
+              <AnalysisPanel
+                document={selectedDocument}
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                onCitationClick={handleCitationClick}
+                onGenerateSummary={() => handleGenerateSummary(selectedDocument, true)}
+                onRiskAnalysis={handleRiskAnalysis}
+                onDefineTerm={handleDefineTerm}
+                isLoading={isLoading}
+                loadingAction={loadingAction}
+              />
+            </div>
+          </>
+        )}
       </div>
        <input
         type="file"

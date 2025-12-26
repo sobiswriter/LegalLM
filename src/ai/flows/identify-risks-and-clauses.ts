@@ -32,14 +32,28 @@ export async function identifyRisksAndClauses(input: IdentifyRisksAndClausesInpu
     return await identifyRisksAndClausesFlow(input);
   } catch (err: any) {
     return {
-      analysis: `<h3>Risk & Clause Analysis</h3><p class='text-destructive'>${err?.message || 'Could not extract usable text from this document. Please upload a text-based file.'}</p>`
+      analysis: `<h3>Risk & Clause Analysis</h3><p class='text-destructive'>${err?.message || 'Could not process this document.'}</p>`
     };
   }
 }
 
-const prompt = ai.definePrompt({
-  name: 'identifyRisksAndClausesPrompt',
+const promptForText = ai.definePrompt({
+  name: 'identifyRisksAndClausesPromptForText',
   input: {schema: z.object({ documentContent: z.string() })},
+  output: {schema: IdentifyRisksAndClausesOutputSchema},
+  prompt: `You are a meticulous legal analyst. Analyze the provided document content to identify potential legal risks, important obligations, and critical clauses.
+  
+  For each finding, provide a clear explanation and cite the relevant part of the document.
+  For each citation, add a data-quote attribute to the sup tag containing the exact text from the document being cited. For example: "<p>The contract is valid until June 1, 2024<sup data-quote="the contract is valid until June 1, 2024">1</sup>.</p>"
+  
+  Structure your output as clean, semantic HTML with <h3> for sections (e.g., "Potential Risks", "Key Clauses") and <p> for descriptions.
+  
+  Document Content: {{{documentContent}}}`,
+});
+
+const promptForPdf = ai.definePrompt({
+  name: 'identifyRisksAndClausesPromptForPdf',
+  input: {schema: z.object({ documentDataUri: z.string() })},
   output: {schema: IdentifyRisksAndClausesOutputSchema},
   prompt: `You are a meticulous legal analyst. Analyze the provided document to identify potential legal risks, important obligations, and critical clauses.
   
@@ -48,7 +62,7 @@ const prompt = ai.definePrompt({
   
   Structure your output as clean, semantic HTML with <h3> for sections (e.g., "Potential Risks", "Key Clauses") and <p> for descriptions.
   
-  Document: {{{documentContent}}}`,
+  Document: {{media url=documentDataUri}}`,
 });
 
 const identifyRisksAndClausesFlow = ai.defineFlow(
@@ -58,8 +72,13 @@ const identifyRisksAndClausesFlow = ai.defineFlow(
     outputSchema: IdentifyRisksAndClausesOutputSchema,
   },
   async ({documentDataUri, documentName}) => {
-    const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
-    const {output} = await prompt({ documentContent: extractedText });
-    return output!;
+    if (documentName.toLowerCase().endsWith('.pdf')) {
+      const {output} = await promptForPdf({ documentDataUri });
+      return output!;
+    } else {
+      const extractedText = await extractTextFromDataUri(documentDataUri, documentName);
+      const {output} = await promptForText({ documentContent: extractedText });
+      return output!;
+    }
   }
 );
